@@ -20,14 +20,15 @@ NUXT_ELINEA_STORE_SECRET=
 NUXT_ELINEA_STORE_SITE=default
 ```
 
-- `NUXT_ELINEA_STORE_KEY` e `NUXT_ELINEA_STORE_SECRET` identificam a loja no
-  servidor Nitro. O segredo nunca é exposto no bundle client-side.
-- `NUXT_ELINEA_STORE_SITE` é somente um fallback para desenvolvimento local sem
-  credenciais e não é aceito em produção.
+- O hostname identifica a loja no servidor Nitro e é enviado à API como
+  `X-Store-Domain`.
+- `NUXT_TRUST_PROXY_HEADERS=true` habilita `X-Forwarded-Host` somente quando o Nitro
+  está atrás de um proxy confiável.
+- `NUXT_ELINEA_STORE_SITE` é o fallback para desenvolvimento em localhost.
 
 O storefront renderiza `app/components/BaseTemplate.vue` diretamente.
 Não existem registry, seleção dinâmica ou cópia de templates dentro da aplicação.
-Branding específico fica em `app/components/base.config.ts` e nos assets;
+Branding específico vem de `data.theme`, configurado pelo onboarding;
 engenharia compartilhada pertence a `@elinea/sdk` e `@elinea/ui`.
 
 ## SSR

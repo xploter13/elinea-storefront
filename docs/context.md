@@ -1,7 +1,8 @@
 # Contexto do Elínea Storefront
 
-Este projeto é uma aplicação Nuxt 4 SSR para uma única loja. A API continua
-multi-tenant, mas o storefront não alterna tenant ou renderer durante uma requisição.
+Este projeto é uma aplicação Nuxt 4 SSR multi-tenant. Uma única instância atende
+todas as lojas e resolve o tenant pelo hostname de cada requisição. O contrato
+operacional completo está em `docs/multi-tenant-context.md`.
 
 ## Fluxo
 
@@ -10,15 +11,15 @@ Domínio do cliente
         ↓
 Nuxt 4 / Nitro SSR
         ↓
-@elinea/sdk + credenciais privadas do .env
+@elinea/sdk + domínio da requisição
         ↓
 Elínea API resolve store → site → tenant
         ↓
 HTML completo + payload de hidratação
 ```
 
-O browser chama apenas rotas internas do Nitro. `X-Store-Secret`, caminhos da API e
-identificadores de tenant não chegam ao bundle público.
+O browser chama apenas rotas internas do Nitro. O servidor encaminha o domínio à API
+como `X-Store-Domain`; segredos e caminhos internos da API não chegam ao bundle.
 
 ## Pacotes
 
@@ -55,14 +56,13 @@ fallback visual ou scaffold de renderers.
 
 ```env
 NUXT_API_BASE=http://elinea-api.test/api/v1
-NUXT_ELINEA_STORE_KEY=
-NUXT_ELINEA_STORE_SECRET=
 NUXT_ELINEA_STORE_SITE=default
+NUXT_TRUST_PROXY_HEADERS=false
+NUXT_CUSTOMER_APP_URL=http://localhost:3001
 ```
 
-Produção exige key e secret. O fallback `NUXT_ELINEA_STORE_SITE` existe somente para
-desenvolvimento local enquanto credenciais dos sites existentes são rotacionadas.
-Host, query string e headers enviados pelo navegador não trocam a loja configurada.
+Em produção atrás do Traefik, use `NUXT_TRUST_PROXY_HEADERS=true`. O fallback
+`NUXT_ELINEA_STORE_SITE` existe para acessos locais sem um hostname de loja.
 
 ## Dados e estado
 
@@ -75,9 +75,10 @@ contratos snake_case antigos até a migração completa para `@elinea/ui`.
 
 ## Branding
 
-A aparência inicial segue o antigo template base aprovado. Cores, tipografia e
-conteúdo padrão estão em `app/components/base.config.ts`; imagens ficam em
-`app/assets` ou `public`. Estruturas reutilizáveis devem evoluir em `@elinea/ui`.
+A aparência usa o template base aprovado e recebe cores, tipografia, conteúdo e
+imagens de `data.theme`. `shared/utils/default-branding.ts` mantém apenas os defaults
+para lojas ainda sem onboarding. Estruturas reutilizáveis devem evoluir em
+`@elinea/ui`.
 
 ## Validação
 
