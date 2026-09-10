@@ -1,7 +1,7 @@
 # Elínea Storefront
 
-Aplicação Nuxt 4 SSR destinada a uma única loja Elínea. Cada cliente possui uma
-cópia e um deploy independentes deste repositório.
+Aplicação Nuxt 4 SSR multi-tenant. Uma única instância atende todas as lojas e aplica
+o tema correto a partir do hostname da requisição.
 
 ## Configuração
 
@@ -15,9 +15,9 @@ Configure:
 
 ```env
 NUXT_API_BASE=http://elinea-api.test/api/v1
-NUXT_ELINEA_STORE_KEY=
-NUXT_ELINEA_STORE_SECRET=
 NUXT_ELINEA_STORE_SITE=default
+NUXT_TRUST_PROXY_HEADERS=false
+NUXT_CUSTOMER_APP_URL=http://localhost:3001
 ```
 
 - O hostname identifica a loja no servidor Nitro e é enviado à API como
@@ -44,15 +44,11 @@ npm run build
 
 ## Área do cliente separada
 
-As rotas `/carrinho` e `/checkout` são encaminhadas pelo Nitro para o
-projeto `C:\htdocs\elinea-customer`. Em desenvolvimento, mantenha esse app
-rodando na porta `3101`. Em produção, configure `NUXT_CUSTOMER_APP_URL` com a
-URL interna do serviço do customer app antes do build do storefront. As rotas
-`/api/*` continuam no host principal, permitindo que autenticação e carrinho
-compartilhem o mesmo cookie e a mesma sessão.
-
-A rota `/conta` permanece no storefront principal, usando o header, footer e a
-identidade visual completos da loja.
+As rotas `/carrinho`, `/checkout`, `/conta/**`, `/login` e `/redefinir-senha` são
+encaminhadas pelo Nitro para o projeto `C:\htdocs\elinea-customer`. Em produção,
+configure `NUXT_CUSTOMER_APP_URL` com a URL interna desse serviço. As rotas `/api/*`
+continuam no host principal, permitindo que autenticação e carrinho compartilhem o
+mesmo cookie e a mesma sessão.
 
 A sessão de visitante do carrinho usa o cookie `elinea_cart_session`, permitindo
 que o carrinho seja preservado ao encaminhar o usuário para o app customer em
