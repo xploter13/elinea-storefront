@@ -1,18 +1,23 @@
 import tailwindcss from '@tailwindcss/vite'
+import { createResolver } from '@nuxt/kit'
 
 const customerAppUrl = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.NUXT_CUSTOMER_APP_URL || 'http://127.0.0.1:3101'
+const { resolve } = createResolver(import.meta.url)
+const localPackages = {
+  '@elinea/ui/styles.css': resolve('../elinea-ui/src/styles.css'),
+  '@elinea/ui': resolve('../elinea-ui/src/index.ts'),
+  '@elinea/sdk': resolve('../elinea-sdk/src/index.ts'),
+}
 
 export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
+  alias: localPackages,
   runtimeConfig: {
     apiBase: 'http://elinea-api.test/api/v1',
     elineaStoreSite: 'default',
     trustProxyHeaders: false,
     customerAppUrl,
-    public: {
-      customerAppUrl,
-    },
   },
   css: ['~/assets/css/main.css'],
   app: {
@@ -32,5 +37,13 @@ export default defineNuxtConfig({
     '/login': { proxy: `${customerAppUrl}/login` },
     '/redefinir-senha': { proxy: `${customerAppUrl}/redefinir-senha` },
   },
-  typescript: { strict: true, typeCheck: true },
+  typescript: {
+    strict: true,
+    typeCheck: true,
+    tsConfig: {
+      compilerOptions: {
+        paths: Object.fromEntries(Object.entries(localPackages).map(([name, path]) => [name, [path]])),
+      },
+    },
+  },
 })
