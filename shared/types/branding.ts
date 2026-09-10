@@ -31,4 +31,5 @@ export interface StorefrontBranding {
   newsletter_button_label: string
   footer_tagline: string
   footer_description: string
+  version: number | null
 }

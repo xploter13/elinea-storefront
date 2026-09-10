@@ -1,18 +1,17 @@
 <script setup lang="ts">
 import { ArrowRight, Baby, BadgePercent, Bandage, Cross, HeartPulse, PackageCheck, ShieldCheck, ShoppingBag, Sparkles, Truck } from '@lucide/vue'
 import type { StorefrontPayload } from '#shared/types/storefront'
+import type { StorefrontBranding } from '#shared/types/branding'
 import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
 import BaseEditorialSpotlight from './BaseEditorialSpotlight.vue'
 import BaseProductCard from './BaseProductCard.vue'
 import BaseServiceRibbon from './BaseServiceRibbon.vue'
-import { baseBranding } from './base.config'
 
-const props = defineProps<{ storefront: StorefrontPayload }>()
+const props = defineProps<{ storefront: StorefrontPayload, theme: StorefrontBranding }>()
 const { activeCategories, productImage, usePlaceholder } = useStorefrontCatalog(props.storefront)
 const featured = computed(() => (props.storefront.products.some(item => item.is_featured) ? props.storefront.products.filter(item => item.is_featured) : props.storefront.products).slice(0, 12))
 const heroProduct = computed(() => featured.value.find(item => productImage(item)) || featured.value[0])
 const secondaryProduct = computed(() => featured.value.find(item => item.id !== heroProduct.value?.id && productImage(item)))
-const theme = computed(() => baseBranding)
 const categoryIcons = [HeartPulse, Sparkles, Baby, Bandage, Cross, BadgePercent]
 const activeDealTab = ref<'best' | 'new' | 'sale'>('best')
 const saleProducts = computed(() => props.storefront.products.filter(product => product.original_price && product.original_price > product.price))

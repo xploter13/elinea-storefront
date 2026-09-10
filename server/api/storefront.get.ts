@@ -1,4 +1,7 @@
 import type { StoreSite, StorefrontPayload } from '#shared/types/storefront'
+import type { StorefrontBranding } from '#shared/types/branding'
+import { defaultBranding } from '#shared/utils/default-branding'
+import { ElineaError } from '@elinea/sdk'
 
 function warningFor(resource: string, reason: unknown): string {
   const status = reason && typeof reason === 'object' && 'statusCode' in reason ? String(reason.statusCode) : 'indisponível'
@@ -8,11 +11,18 @@ function warningFor(resource: string, reason: unknown): string {
 export default defineEventHandler(async (event): Promise<StorefrontPayload> => {
   const elinea = createServerElineaClient(event)
   let site: StoreSite
+  let theme: StorefrontBranding
 
   try {
-    site = toLegacyStore(await elinea.store.get())
+    const store = await elinea.store.get()
+    site = toLegacyStore(store)
+    theme = store.theme ? toLegacyBranding(store.theme) : { ...defaultBranding }
   } catch (error) {
-    const upstreamStatus = error && typeof error === 'object' && 'statusCode' in error ? Number(error.statusCode) : 502
+    const upstreamStatus = error instanceof ElineaError
+      ? error.status
+      : error && typeof error === 'object' && 'statusCode' in error
+        ? Number(error.statusCode)
+        : 502
     const notFound = upstreamStatus === 404
     throw createError({
       statusCode: notFound ? 404 : 502,
@@ -35,6 +45,7 @@ export default defineEventHandler(async (event): Promise<StorefrontPayload> => {
 
   return {
     site,
+    theme,
     products: productsResult.status === 'fulfilled' ? productsResult.value.data.map(toLegacyProduct) : [],
     categories: categoriesResult.status === 'fulfilled' ? categoriesResult.value.data.map(toLegacyCategory) : [],
     analytics: analyticsResult.status === 'fulfilled' ? toLegacyAnalytics(analyticsResult.value) : null,

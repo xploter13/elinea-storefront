@@ -3,10 +3,11 @@ import type { StorefrontPage } from '~/utils/storefront-page'
 import { pageTitle } from '~/utils/storefront-page'
 
 export function useStorefrontPage(page: StorefrontPage) {
+  const requestUrl = useRequestURL()
   const requestHeaders = import.meta.server ? useRequestHeaders(['host', 'x-forwarded-host']) : undefined
   const request = useFetch<StorefrontPayload>('/api/storefront', {
     headers: requestHeaders,
-    key: 'storefront',
+    key: `storefront:${requestUrl.hostname}`,
   })
 
   const { data, error } = request
@@ -14,6 +15,11 @@ export function useStorefrontPage(page: StorefrontPage) {
     title: () => data.value ? `${pageTitle(page, data.value)} | ${data.value.site.name}` : 'Elínea',
     description: () => data.value ? `Conheça ${pageTitle(page, data.value)} em ${data.value.site.name}.` : undefined,
     ogTitle: () => data.value ? `${pageTitle(page, data.value)} | ${data.value.site.name}` : 'Elínea',
+  })
+  useHead({
+    link: () => data.value?.theme.favicon_url
+      ? [{ rel: 'icon', href: data.value.theme.favicon_url }]
+      : [],
   })
 
   return request.then(({ data: resolvedData, error: resolvedError }) => {

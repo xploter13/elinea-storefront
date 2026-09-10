@@ -8,8 +8,7 @@ export default defineNuxtConfig({
   runtimeConfig: {
     apiBase: 'http://elinea-api.test/api/v1',
     elineaStoreSite: 'default',
-    elineaStoreKey: '',
-    elineaStoreSecret: '',
+    trustProxyHeaders: false,
     customerAppUrl,
     public: {
       customerAppUrl,

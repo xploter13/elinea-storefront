@@ -61,6 +61,7 @@ export interface AnalyticsConfiguration {
 
 export interface StorefrontPayload {
   site: StoreSite
+  theme: import('./branding').StorefrontBranding
   products: StoreProduct[]
   categories: StoreCategory[]
   analytics: AnalyticsConfiguration | null

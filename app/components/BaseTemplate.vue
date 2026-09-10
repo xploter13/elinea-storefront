@@ -10,7 +10,6 @@ import BaseCategories from './BaseCategories.vue'
 import BaseHome from './BaseHome.vue'
 import BaseProductDetail from './BaseProductDetail.vue'
 import BaseProducts from './BaseProducts.vue'
-import { baseBranding } from './base.config'
 
 const props = defineProps<{ storefront: StorefrontPayload, page: StorefrontPage }>()
 const product = computed(() => {
@@ -22,7 +21,7 @@ const category = computed(() => {
   return page.kind === 'category' ? props.storefront.categories.find(item => item.slug === page.slug) : undefined
 })
 const categoryProducts = computed(() => category.value ? props.storefront.products.filter(item => item.categories.some(value => value.id === category.value?.id)) : [])
-const theme = computed(() => baseBranding)
+const theme = computed(() => props.storefront.theme)
 const themeStyle = computed(() => ({
   '--sf-primary': theme.value?.primary_color || '#2563eb',
   '--sf-ink': theme.value?.secondary_color || '#111827',
@@ -51,7 +50,7 @@ const themeStyle = computed(() => ({
 <template>
   <div class="base-shell" data-theme="light" :style="themeStyle">
     <BaseHeader :storefront="storefront" :store-name="storefront.site.name" :logo-url="theme?.logo_url" :categories="storefront.categories" :theme="theme" />
-    <BaseHome v-if="page.kind === 'home'" :storefront="storefront" />
+    <BaseHome v-if="page.kind === 'home'" :storefront="storefront" :theme="theme" />
     <BaseProducts v-else-if="page.kind === 'products'" :storefront="storefront" :products="storefront.products" />
     <BaseCategories v-else-if="page.kind === 'categories'" :categories="storefront.categories" />
     <BaseProducts v-else-if="page.kind === 'category' && category" :storefront="storefront" :products="categoryProducts" :title="category.name" :description="category.description || undefined" />
