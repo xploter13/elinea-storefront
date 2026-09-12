@@ -5,6 +5,7 @@ const customerAppUrl = (globalThis as { process?: { env?: Record<string, string 
 const { resolve } = createResolver(import.meta.url)
 const localPackages = {
   '@elinea/ui/styles.css': resolve('../elinea-ui/src/styles.css'),
+  '@elinea/ui/storefront': resolve('../elinea-ui/src/storefront.ts'),
   '@elinea/ui': resolve('../elinea-ui/src/index.ts'),
   '@elinea/sdk': resolve('../elinea-sdk/src/index.ts'),
 }
@@ -29,7 +30,10 @@ export default defineNuxtConfig({
       ],
     },
   },
-  vite: { plugins: [tailwindcss()] },
+  vite: {
+    plugins: [tailwindcss()],
+    server: { fs: { allow: [resolve('..')] } },
+  },
   routeRules: {
     '/carrinho': { proxy: `${customerAppUrl}/carrinho` },
     '/checkout': { proxy: `${customerAppUrl}/checkout` },

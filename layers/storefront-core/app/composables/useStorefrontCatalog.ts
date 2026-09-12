@@ -1,5 +1,5 @@
 import type { StoreProduct, StorefrontPayload } from '#shared/types/storefront'
-import { formatMoney } from '@elinea/ui'
+import { formatMoney } from '@elinea/ui/storefront'
 
 export function useStorefrontCatalog(storefront?: Pick<StorefrontPayload, 'categories'>) {
   const money = (value: number) => formatMoney(value)

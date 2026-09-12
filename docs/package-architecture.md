@@ -29,15 +29,19 @@ O SDK é TypeScript puro e não contém imports de Vue ou Nuxt.
 
 ### `@elinea/ui`
 
-- tokens derivados do storefront base aprovado;
-- provider/adapters de comércio sem dependência de Nuxt ou Pinia;
-- primitives de botão, input, badge, modal, drawer e estado vazio;
-- produto, preço, quantidade, add-to-cart, grid, página de produto e categorias;
-- item, resumo e drawer de carrinho;
-- estruturas configuráveis de header e footer.
+- `@elinea/ui/core`: primitivas `Ui*` sem conhecimento de produto;
+- `@elinea/ui/marketing`: componentes `Marketing*` do site institucional;
+- `@elinea/ui/storefront`: componentes `Storefront*`, provider/adapters de comércio,
+  produto, preço, quantidade, carrinho, categorias, header e footer;
+- `@elinea/ui/painel`: domínio reservado aos componentes `Painel*` que serão
+  migrados futuramente do painel administrativo.
 
 Os componentes aceitam slots e variantes. O estilo `base` é o default; identidade de
 outros clientes entra por CSS variables e composição.
+
+Imports novos devem usar o subpath do domínio. Os aliases antigos com prefixo
+`Elinea` existem apenas na entrada raiz durante a transição. A decisão completa está
+documentada em `elinea-ui/docs/context.md`.
 
 ### Storefront
 

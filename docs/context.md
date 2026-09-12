@@ -24,7 +24,9 @@ como `X-Store-Domain`; segredos e caminhos internos da API não chegam ao bundle
 ## Pacotes
 
 - `@elinea/sdk`: TypeScript puro, HTTP, contratos, mappers e erros da Elínea API.
-- `@elinea/ui`: Vue, tokens e componentes reutilizáveis baseados no design aprovado.
+- `@elinea/ui`: Vue, tokens e componentes reutilizáveis organizados em `core`,
+  `marketing`, `storefront` e `painel`. Este projeto consome a API pública
+  `@elinea/ui/storefront`; nomes com prefixo `Elinea` são compatibilidade temporária.
 - storefront: SSR, runtimeConfig, rotas, SEO, branding, assets e composição da loja.
 
 As dependências `file:../elinea-sdk` e `file:../elinea-ui` são transitórias até a
