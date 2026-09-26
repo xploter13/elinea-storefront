@@ -20,9 +20,11 @@ elinea-api (Laravel ResolveSite)
 Site + catálogo + tema do onboarding
 ```
 
-O mesmo domínio deve chegar ao `elinea-customer` nas rotas de carrinho, checkout e
-redefinição de senha. A área de conta agora é servida pelo storefront; ambos os
+O mesmo domínio deve chegar ao `elinea-customer` para a redefinição de senha.
+A área de conta, o carrinho e o checkout são servidos pelo storefront; ambos os
 projetos usam a mesma resolução de hostname.
+Os assets Nuxt do customer usam `/_customer/` para não colidir com os assets do
+storefront. Login, carrinho e checkout compartilham os cookies do mesmo hostname.
 
 ## Contrato de resolução
 

@@ -13,9 +13,6 @@ const {
   cart, cartProducts, wishlistProducts, cartOpen, wishlistOpen, busyProducts, notice,
   initialize, addToCart, updateQuantity, removeFromCart, toggleWishlist,
 } = useStorefrontCommerce(props.storefront)
-const runtimeConfig = useRuntimeConfig()
-const customerAppUrl = String(runtimeConfig.public.customerAppUrl || '').replace(/\/$/, '')
-const customerUrl = (path: string) => customerAppUrl ? `${customerAppUrl}${path}` : path
 
 onMounted(initialize)
 watch(cartOpen, (open) => {
@@ -58,8 +55,8 @@ onBeforeUnmount(() => {
 
         <footer v-if="cartProducts.length" class="cart-footer">
           <div class="cart-subtotal"><span>Subtotal</span><strong>{{ money(cart.totals.items_total) }}</strong></div>
-          <a :href="customerUrl('/checkout')" class="checkout-button" @click="cartOpen=false">Finalizar compra</a>
-          <a :href="customerUrl('/carrinho')" class="view-cart" @click="cartOpen=false">Ver carrinho completo <ArrowRight :size="14"/></a>
+          <NuxtLink to="/checkout" class="checkout-button" @click="cartOpen=false">Finalizar compra</NuxtLink>
+          <NuxtLink to="/carrinho" class="view-cart" @click="cartOpen=false">Ver carrinho completo <ArrowRight :size="14"/></NuxtLink>
           <p>Frete e descontos calculados no checkout.</p>
         </footer>
       </aside>

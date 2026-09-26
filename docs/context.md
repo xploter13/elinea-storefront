@@ -52,9 +52,15 @@ shared/types/
 
 `BaseTemplate.vue` é importado diretamente pelas páginas da loja. `/conta` e suas
 subrotas (`pedidos`, `enderecos`, `dados`, `seguranca`) são renderizadas pelo
-storefront, com login local e rotas Nitro para perfil, endereços e pedidos. Carrinho,
-checkout e redefinição de senha ainda usam o `elinea-customer` via proxy. Não há seleção por `template.folder`, registry,
+storefront, com login local e rotas Nitro para perfil, endereços e pedidos. Carrinho e
+checkout também são páginas locais e usam o mesmo estado de comércio e as mesmas
+rotas Nitro da loja. A redefinição de senha ainda usa o `elinea-customer` via proxy. Não há seleção por `template.folder`, registry,
 fallback visual ou scaffold de renderers.
+
+O `elinea-customer` publica seus assets em `/_customer/`, encaminhados pelo
+storefront para a redefinição de senha. Carrinho e checkout usam os assets do
+storefront. As chamadas do browser para `/api/cart`, `/api/auth` e
+`/api/addresses` usam as rotas do storefront e os mesmos cookies do domínio.
 
 ## Ambiente
 

@@ -35,9 +35,8 @@ export default defineNuxtConfig({
     server: { fs: { allow: [resolve('..')] } },
   },
   routeRules: {
-    '/carrinho': { proxy: `${customerAppUrl}/carrinho` },
-    '/checkout': { proxy: `${customerAppUrl}/checkout` },
     '/redefinir-senha': { proxy: `${customerAppUrl}/redefinir-senha` },
+    '/_customer/**': { proxy: `${customerAppUrl}/_customer/**` },
   },
   typescript: {
     strict: true,
