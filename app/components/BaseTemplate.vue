@@ -56,6 +56,7 @@ const themeStyle = computed(() => ({
     <BaseProducts v-else-if="page.kind === 'category' && category" :storefront="storefront" :products="categoryProducts" :title="category.name" :description="category.description || undefined" />
     <BaseProductDetail v-else-if="page.kind === 'product' && product" :product="product" :storefront="storefront" />
     <BaseCart v-else-if="page.kind === 'cart'" :storefront="storefront" />
+    <slot v-else-if="page.kind === 'login'" />
     <BaseFooter :store-name="storefront.site.name" :theme="theme" />
     <BaseCookieConsent />
     <StorefrontCommerceOverlay :storefront="storefront" />

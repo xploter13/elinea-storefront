@@ -7,7 +7,7 @@ import SharedCommerceHeader from './SharedCommerceHeader.vue'
 
 const props = defineProps<{ storefront: StorefrontPayload, page: StorefrontPage }>()
 const section = computed(() => props.page.kind === 'account' ? props.page.section : 'overview')
-const title = computed(() => ({ overview: 'Sua conta, em um só lugar.', orders: 'Meus pedidos', addresses: 'Meus endereços', profile: 'Meus dados' })[section.value])
+const title = computed(() => ({ overview: 'Sua conta, em um só lugar.', orders: 'Meus pedidos', addresses: 'Meus endereços', profile: 'Meus dados', security: 'Segurança' })[section.value])
 const email = ref('')
 const password = ref('')
 const pending = ref(false)

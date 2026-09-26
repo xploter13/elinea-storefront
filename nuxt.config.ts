@@ -37,8 +37,6 @@ export default defineNuxtConfig({
   routeRules: {
     '/carrinho': { proxy: `${customerAppUrl}/carrinho` },
     '/checkout': { proxy: `${customerAppUrl}/checkout` },
-    '/conta/**': { proxy: `${customerAppUrl}/conta/**` },
-    '/login': { proxy: `${customerAppUrl}/login` },
     '/redefinir-senha': { proxy: `${customerAppUrl}/redefinir-senha` },
   },
   typescript: {

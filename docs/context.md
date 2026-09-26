@@ -50,8 +50,10 @@ server/
 shared/types/
 ```
 
-`BaseTemplate.vue` é importado diretamente pela página catch-all. Checkout e conta
-continuam compartilhados, mas não há seleção por `template.folder`, registry,
+`BaseTemplate.vue` é importado diretamente pelas páginas da loja. `/conta` e suas
+subrotas (`pedidos`, `enderecos`, `dados`, `seguranca`) são renderizadas pelo
+storefront, com login local e rotas Nitro para perfil, endereços e pedidos. Carrinho,
+checkout e redefinição de senha ainda usam o `elinea-customer` via proxy. Não há seleção por `template.folder`, registry,
 fallback visual ou scaffold de renderers.
 
 ## Ambiente
@@ -70,6 +72,8 @@ Em produção atrás do Traefik, use `NUXT_TRUST_PROXY_HEADERS=true`. O fallback
 
 `GET /api/storefront` agrega site, produtos, categorias, analytics e newsletter pelo
 SDK. As rotas `/api/cart` mantêm `X-Cart-Session` e usam o mesmo cliente server-side.
+As rotas `/api/auth`, `/api/addresses` e `/api/orders` usam o mesmo contexto de tenant
+e o token de cliente armazenado em cookie HTTP-only.
 Wishlist ainda fica no `localStorage`, isolada por `site.slug`.
 
 O layer `layers/storefront-core` é transitório. Ele contém estado Nuxt e adapters dos

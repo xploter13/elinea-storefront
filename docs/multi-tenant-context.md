@@ -21,7 +21,8 @@ Site + catálogo + tema do onboarding
 ```
 
 O mesmo domínio deve chegar ao `elinea-customer` nas rotas de carrinho, checkout e
-conta. Por isso storefront e customer usam a mesma resolução de hostname.
+redefinição de senha. A área de conta agora é servida pelo storefront; ambos os
+projetos usam a mesma resolução de hostname.
 
 ## Contrato de resolução
 

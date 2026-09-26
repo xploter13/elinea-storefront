@@ -61,9 +61,9 @@ adapta os contratos visuais antigos. A única composição ativa está em
 `app/components` e preserva o HTML/CSS aprovado. Ela deve migrar componente
 a componente para `@elinea/ui`, sempre com screenshots comparativos desktop/mobile.
 
-Checkout e área do cliente atuais são protótipos visuais, não fluxos operacionais
-completos. A extração para o UI deve ocorrer junto da implementação real dos
-contratos SDK, evitando cristalizar telas demonstrativas como API pública.
+Checkout ainda é um protótipo visual. A área de conta foi migrada para o storefront:
+perfil, endereços, pedidos e configuração de 2FA usam contratos do SDK. A extração
+de suas estruturas para o UI deve acompanhar a estabilização desses fluxos.
 
 ## Próximas fases
 
@@ -71,7 +71,7 @@ contratos SDK, evitando cristalizar telas demonstrativas como API pública.
 2. Configurar credenciais nos sites existentes e retirar o fallback local por slug.
 3. Migrar `BaseProductCard`, grids e produto com comparação visual automatizada.
 4. Migrar header, footer, categorias e overlays mantendo slots específicos da loja.
-5. Implementar checkout/customer reais e então extrair suas estruturas para o UI.
+5. Implementar checkout real, concluir os fluxos de conta e então extrair suas estruturas para o UI.
 6. Remover contratos snake_case e o layer `storefront-core` após o último consumidor.
 
 Não criar `@elinea/nuxt` até pelo menos dois storefronts demonstrarem repetição real
