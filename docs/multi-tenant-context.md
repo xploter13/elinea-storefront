@@ -20,11 +20,8 @@ elinea-api (Laravel ResolveSite)
 Site + catálogo + tema do onboarding
 ```
 
-O mesmo domínio deve chegar ao `elinea-customer` para a redefinição de senha.
-A área de conta, o carrinho e o checkout são servidos pelo storefront; ambos os
-projetos usam a mesma resolução de hostname.
-Os assets Nuxt do customer usam `/_customer/` para não colidir com os assets do
-storefront. Login, carrinho e checkout compartilham os cookies do mesmo hostname.
+A área de conta, o carrinho, o checkout e a recuperação de senha são servidos pelo
+storefront e compartilham os cookies do mesmo hostname.
 
 ## Contrato de resolução
 
@@ -79,15 +76,6 @@ o tema pertence ao onboarding e é apenas consumido pelo endpoint público da lo
 ## Configuração de ambiente
 
 Storefront:
-
-```env
-NUXT_API_BASE=http://elinea-api.test/api/v1
-NUXT_ELINEA_STORE_SITE=default
-NUXT_TRUST_PROXY_HEADERS=true
-NUXT_CUSTOMER_APP_URL=http://elinea-customer:3000
-```
-
-Customer:
 
 ```env
 NUXT_API_BASE=http://elinea-api.test/api/v1
@@ -170,7 +158,7 @@ npm test
 npm run typecheck
 npm run build
 
-# elinea-storefront, elinea-customer e elinea-admin
+# elinea-storefront e elinea-admin
 npm run typecheck
 npm run build
 ```

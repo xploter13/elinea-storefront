@@ -1,7 +1,6 @@
 import tailwindcss from '@tailwindcss/vite'
 import { createResolver } from '@nuxt/kit'
 
-const customerAppUrl = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env?.NUXT_CUSTOMER_APP_URL || 'http://127.0.0.1:3101'
 const { resolve } = createResolver(import.meta.url)
 const localPackages = {
   '@elinea/ui/styles.css': resolve('../elinea-ui/src/styles.css'),
@@ -18,7 +17,6 @@ export default defineNuxtConfig({
     apiBase: 'http://elinea-api.test/api/v1',
     elineaStoreSite: 'default',
     trustProxyHeaders: false,
-    customerAppUrl,
   },
   css: ['~/assets/css/main.css'],
   app: {
@@ -33,10 +31,6 @@ export default defineNuxtConfig({
   vite: {
     plugins: [tailwindcss()],
     server: { fs: { allow: [resolve('..')] } },
-  },
-  routeRules: {
-    '/redefinir-senha': { proxy: `${customerAppUrl}/redefinir-senha` },
-    '/_customer/**': { proxy: `${customerAppUrl}/_customer/**` },
   },
   typescript: {
     strict: true,

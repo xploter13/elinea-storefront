@@ -54,12 +54,10 @@ shared/types/
 subrotas (`pedidos`, `enderecos`, `dados`, `seguranca`) são renderizadas pelo
 storefront, com login local e rotas Nitro para perfil, endereços e pedidos. Carrinho e
 checkout também são páginas locais e usam o mesmo estado de comércio e as mesmas
-rotas Nitro da loja. A redefinição de senha ainda usa o `elinea-customer` via proxy. Não há seleção por `template.folder`, registry,
+rotas Nitro da loja. A redefinição de senha também é local. Não há seleção por `template.folder`, registry,
 fallback visual ou scaffold de renderers.
 
-O `elinea-customer` publica seus assets em `/_customer/`, encaminhados pelo
-storefront para a redefinição de senha. Carrinho e checkout usam os assets do
-storefront. As chamadas do browser para `/api/cart`, `/api/auth` e
+As chamadas do browser para `/api/cart`, `/api/auth` e
 `/api/addresses` usam as rotas do storefront e os mesmos cookies do domínio.
 
 ## Ambiente
@@ -68,7 +66,6 @@ storefront. As chamadas do browser para `/api/cart`, `/api/auth` e
 NUXT_API_BASE=http://elinea-api.test/api/v1
 NUXT_ELINEA_STORE_SITE=default
 NUXT_TRUST_PROXY_HEADERS=false
-NUXT_CUSTOMER_APP_URL=http://localhost:3001
 ```
 
 Em produção atrás do Traefik, use `NUXT_TRUST_PROXY_HEADERS=true`. O fallback

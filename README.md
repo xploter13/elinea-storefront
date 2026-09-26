@@ -17,7 +17,6 @@ Configure:
 NUXT_API_BASE=http://elinea-api.test/api/v1
 NUXT_ELINEA_STORE_SITE=default
 NUXT_TRUST_PROXY_HEADERS=false
-NUXT_CUSTOMER_APP_URL=http://localhost:3001
 ```
 
 - O hostname identifica a loja no servidor Nitro e é enviado à API como
@@ -42,21 +41,18 @@ npm run typecheck
 npm run build
 ```
 
-## Área do cliente separada
+## Área do cliente
 
 As rotas `/carrinho`, `/checkout`, `/conta/**`, `/login` e `/redefinir-senha` são
-encaminhadas pelo Nitro para o projeto `C:\htdocs\elinea-customer`. Em produção,
-configure `NUXT_CUSTOMER_APP_URL` com a URL interna desse serviço. As rotas `/api/*`
-continuam no host principal, permitindo que autenticação e carrinho compartilhem o
-mesmo cookie e a mesma sessão.
+servidas pelo próprio storefront. As rotas Nitro em `/api/*` atendem autenticação,
+recuperação de senha e carrinho no mesmo host, compartilhando os cookies da sessão.
 
 A sessão de visitante do carrinho usa o cookie `elinea_cart_session`, permitindo
-que o carrinho seja preservado ao encaminhar o usuário para o app customer em
-outra porta ou serviço. O `localStorage` antigo permanece apenas como fallback de
-migração.
+que o carrinho seja preservado entre páginas. O `localStorage` antigo permanece
+apenas como fallback de migração.
 
 Consulte `docs/context.md` e `docs/package-architecture.md` para os limites de cada
 camada.
 # elinea-storefront
 
-O storefront concentra a vitrine pública. As rotas `/conta/**`, `/login` e `/redefinir-senha`, além de `/carrinho` e `/checkout`, são encaminhadas pelo Nitro para o `elinea-customer` através de `NUXT_CUSTOMER_APP_URL`.
+O storefront concentra a vitrine pública, a área do cliente, o carrinho, o checkout e a recuperação de senha.
