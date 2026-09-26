@@ -43,7 +43,7 @@ npm run build
 
 ## Área do cliente
 
-As rotas `/carrinho`, `/checkout`, `/conta/**`, `/login` e `/redefinir-senha` são
+As rotas `/carrinho`, `/checkout`, `/conta/**`, `/login`, `/cadastro` e `/redefinir-senha` são
 servidas pelo próprio storefront. As rotas Nitro em `/api/*` atendem autenticação,
 recuperação de senha e carrinho no mesmo host, compartilhando os cookies da sessão.
 

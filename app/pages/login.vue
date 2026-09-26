@@ -91,6 +91,7 @@ async function submit() {
             </form>
             <p class="login-footnote"><ShieldCheck :size="17" /> Acesso protegido pela sua senha.</p>
           </section>
+          <div class="browse-note"><span>Ainda não tem uma conta?</span><NuxtLink :to="{ path: '/cadastro', query: typeof route.query.redirect === 'string' ? { redirect: route.query.redirect } : {} }">Criar conta <ArrowRight :size="16" /></NuxtLink></div>
           <div class="browse-note"><span>Quer conhecer a loja primeiro?</span><NuxtLink to="/produtos">Explorar produtos <ArrowRight :size="16" /></NuxtLink></div>
         </div>
       </div>

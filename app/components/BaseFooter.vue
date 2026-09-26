@@ -13,6 +13,13 @@ const footerGroups = [
   { title: 'Central de ajuda', links: ['Contato', 'Perguntas frequentes', 'Encontre uma loja', 'Informações de envio', 'Pagamentos', 'Guia de tamanhos'] },
   { title: 'Internacional', links: ['Portugal', 'Estados Unidos', 'Canadá', 'Espanha', 'Dubai', 'Singapura', 'Mapa global'] }
 ]
+const footerDestination = (label: string) => ({
+  'Minha conta': '/conta',
+  'Meus pedidos': '/conta/pedidos',
+  Entrar: '/login',
+  'Criar conta': '/cadastro',
+  Carrinho: '/carrinho',
+})[label] || '/produtos'
 </script>
 
 <template>
@@ -51,7 +58,7 @@ const footerGroups = [
 
       <nav v-for="group in footerGroups" :key="group.title" class="footer-group" :aria-label="group.title">
         <h3>{{ group.title }}</h3>
-        <NuxtLink v-for="link in group.links" :key="link" to="/produtos">{{ link }}</NuxtLink>
+        <NuxtLink v-for="link in group.links" :key="link" :to="footerDestination(link)">{{ link }}</NuxtLink>
       </nav>
     </div>
 

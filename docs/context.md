@@ -52,7 +52,7 @@ shared/types/
 
 `BaseTemplate.vue` é importado diretamente pelas páginas da loja. `/conta` e suas
 subrotas (`pedidos`, `enderecos`, `dados`, `seguranca`) são renderizadas pelo
-storefront, com login local e rotas Nitro para perfil, endereços e pedidos. Carrinho e
+storefront, com login e cadastro locais e rotas Nitro para perfil, endereços e pedidos. Carrinho e
 checkout também são páginas locais e usam o mesmo estado de comércio e as mesmas
 rotas Nitro da loja. A redefinição de senha também é local. Não há seleção por `template.folder`, registry,
 fallback visual ou scaffold de renderers.

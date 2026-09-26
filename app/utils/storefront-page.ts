@@ -9,6 +9,7 @@ export type StorefrontPage =
   | { kind: 'cart' }
   | { kind: 'checkout' }
   | { kind: 'login' }
+  | { kind: 'register' }
   | { kind: 'password-reset' }
   | { kind: 'account', section: 'overview' | 'orders' | 'addresses' | 'profile' | 'security' }
   | { kind: 'not-found' }
@@ -21,6 +22,7 @@ export function resolveStorefrontPage(path: string): StorefrontPage {
   if (segments.length === 1 && segments[0] === 'carrinho') return { kind: 'cart' }
   if (segments.length === 1 && segments[0] === 'checkout') return { kind: 'checkout' }
   if (segments.length === 1 && segments[0] === 'login') return { kind: 'login' }
+  if (segments.length === 1 && segments[0] === 'cadastro') return { kind: 'register' }
   if (segments.length === 1 && segments[0] === 'redefinir-senha') return { kind: 'password-reset' }
   if (segments.length === 1 && segments[0] === 'conta') return { kind: 'account', section: 'overview' }
   if (segments.length === 2 && segments[0] === 'conta') {
@@ -43,6 +45,7 @@ export function pageTitle(page: StorefrontPage, storefront: StorefrontPayload): 
   if (page.kind === 'cart') return 'Carrinho'
   if (page.kind === 'checkout') return 'Finalizar compra'
   if (page.kind === 'login') return 'Entrar na conta'
+  if (page.kind === 'register') return 'Criar conta'
   if (page.kind === 'password-reset') return 'Redefinir senha'
   if (page.kind === 'account') {
     if (page.section === 'orders') return 'Meus pedidos'
