@@ -65,6 +65,7 @@ export interface StorefrontPayload {
   products: StoreProduct[]
   categories: StoreCategory[]
   analytics: AnalyticsConfiguration | null
+  shipping_providers: import('@elinea/sdk').ShippingProvider[]
   newsletter: { enabled: boolean } | null
   warnings: string[]
 }

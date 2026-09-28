@@ -4,6 +4,7 @@ import type { ProductVariation, StoreProduct, StorefrontPayload } from '#shared/
 import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
 import { useStorefrontCommerce } from '~~/layers/storefront-core/app/composables/useStorefrontCommerce'
 import BaseProductCard from './BaseProductCard.vue'
+import BaseShippingEstimate from './BaseShippingEstimate.vue'
 
 const props = defineProps<{ product: StoreProduct, storefront: StorefrontPayload }>()
 const quantity = ref(1)
@@ -24,6 +25,7 @@ const relatedProducts = computed(() => props.storefront.products.filter(product 
 const recentlyViewed = computed(() => relatedProducts.value.slice(0, 4))
 const recommended = computed(() => relatedProducts.value.slice(4, 8).length ? relatedProducts.value.slice(4, 8) : relatedProducts.value.slice(0, 4))
 const variationChoices = computed(() => props.product.variations.filter(variation => variation.name || Object.keys(variation.attributes).length))
+const shippingProvider = computed(() => props.storefront.shipping_providers.find(provider => provider.provider === 'correios'))
 const specificationRows = computed(() => [['SKU', props.product.sku], ['Categoria', props.product.categories[0]?.name || 'Não informada'], ['Disponibilidade', stockLabel.value], ['Status', props.product.state || 'Ativo']].filter(([, value]) => Boolean(value)))
 
 watch(images, () => { if (selectedImage.value >= images.value.length) selectedImage.value = 0 }, { immediate: true })
@@ -47,6 +49,7 @@ const addProductToCart = () => addToCart(props.product, quantity.value)
         <div class="summary-meta"><div class="rating"><Star v-for="star in 5" :key="star" :size="15" fill="currentColor" /><span>Produto selecionado</span></div><span class="meta-divider"></span><span>SKU: <strong>{{ product.sku }}</strong></span></div>
         <div class="price-row"><div><s v-if="hasSale">{{ money(product.original_price!) }}</s><strong>{{ money(product.price) }}</strong><small>à vista</small></div><span v-if="hasSale" class="save-pill">Economize {{ discount(product) }}%</span></div>
         <div class="register-promo"><div class="promo-mark">✦</div><div><strong>Sua conta nesta loja</strong><span>Crie uma conta para acompanhar pedidos e manter seus endereços salvos.</span></div><NuxtLink to="/cadastro">Cadastrar <ArrowRight :size="15" /></NuxtLink></div>
+        <BaseShippingEstimate v-if="shippingProvider" :product-id="product.id" :quantity="quantity" :provider="shippingProvider" />
         <div v-if="variationChoices.length" class="variation-group"><div class="variation-heading"><strong>Opções</strong><span>{{ selectedVariation?.name || 'Selecione uma opção' }}</span></div><div class="variation-list"><button v-for="variation in variationChoices" :key="variation.sku" type="button" class="variation-button" :class="{ selected: selectedVariation?.sku === variation.sku, unavailable: variation.stock < 1 }" :disabled="variation.stock < 1" @click="selectVariation(variation)">{{ variation.name || Object.values(variation.attributes).join(' / ') }}<Check v-if="selectedVariation?.sku === variation.sku" :size="14" /></button></div></div>
         <div class="purchase-row"><div class="quantity-control" aria-label="Quantidade"><button type="button" aria-label="Diminuir quantidade" @click="changeQuantity(quantity - 1)"><Minus :size="17" /></button><span>{{ String(quantity).padStart(2, '0') }}</span><button type="button" aria-label="Aumentar quantidade" @click="changeQuantity(quantity + 1)"><Plus :size="17" /></button></div><button class="primary-buy" type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart"><span v-if="busy" class="loading loading-spinner loading-sm"></span><ShoppingCart v-else :size="18" />{{ product.stock < 1 ? 'Produto indisponível' : 'Adicionar ao carrinho' }}</button><button class="wishlist-button" :class="{ active: wished }" type="button" :aria-label="wished ? 'Remover da lista de desejos' : 'Adicionar à lista de desejos'" :aria-pressed="wished" @click="toggleWishlist(product)"><Heart :size="19" :fill="wished ? 'currentColor' : 'none'" /></button></div>
         <button class="buy-now" type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart">Comprar agora</button>

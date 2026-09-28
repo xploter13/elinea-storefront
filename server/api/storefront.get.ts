@@ -31,17 +31,19 @@ export default defineEventHandler(async (event): Promise<StorefrontPayload> => {
     })
   }
 
-  const [productsResult, categoriesResult, analyticsResult, newsletterResult] = await Promise.allSettled([
+  const [productsResult, categoriesResult, analyticsResult, newsletterResult, shippingProvidersResult] = await Promise.allSettled([
     elinea.catalog.products.list({ perPage: 100 }),
     elinea.catalog.categories.list({ perPage: 100 }),
     elinea.analytics.get(),
     elinea.marketing.newsletterPopup.get(),
+    elinea.checkout.shippingProviders(),
   ])
   const warnings: string[] = []
   if (productsResult.status === 'rejected') warnings.push(warningFor('products', productsResult.reason))
   if (categoriesResult.status === 'rejected') warnings.push(warningFor('categories', categoriesResult.reason))
   if (analyticsResult.status === 'rejected') warnings.push(warningFor('analytics', analyticsResult.reason))
   if (newsletterResult.status === 'rejected') warnings.push(warningFor('newsletter', newsletterResult.reason))
+  if (shippingProvidersResult.status === 'rejected') warnings.push(warningFor('shipping_providers', shippingProvidersResult.reason))
 
   return {
     site,
@@ -49,6 +51,7 @@ export default defineEventHandler(async (event): Promise<StorefrontPayload> => {
     products: productsResult.status === 'fulfilled' ? productsResult.value.data.map(toLegacyProduct) : [],
     categories: categoriesResult.status === 'fulfilled' ? categoriesResult.value.data.map(toLegacyCategory) : [],
     analytics: analyticsResult.status === 'fulfilled' ? toLegacyAnalytics(analyticsResult.value) : null,
+    shipping_providers: shippingProvidersResult.status === 'fulfilled' ? shippingProvidersResult.value : [],
     newsletter: newsletterResult.status === 'fulfilled' ? newsletterResult.value : null,
     warnings,
   }
