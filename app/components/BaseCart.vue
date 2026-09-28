@@ -12,7 +12,7 @@ onMounted(initialize)
 
 <template>
   <div class="cart-shell">
-    <SharedCommerceHeader :store-name="storefront.site.name" step="Carrinho" />
+    <SharedCommerceHeader :store-name="storefront.site.name" :logo-url="storefront.theme?.logo_url" step="Carrinho" />
     <main class="cart-page" :class="{ 'has-items': cartProducts.length }">
     <template v-if="cartProducts.length">
       <section class="cart-list">

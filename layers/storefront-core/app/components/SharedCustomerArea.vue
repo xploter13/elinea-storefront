@@ -37,7 +37,7 @@ async function logout() {
 
 <template>
   <div class="account-shell">
-    <SharedCommerceHeader :store-name="storefront.site.name" />
+    <SharedCommerceHeader :store-name="storefront.site.name" :logo-url="storefront.theme?.logo_url" />
     <main class="account-layout">
       <aside class="account-nav">
         <NuxtLink to="/" class="shop-link"><House :size="17"/> Voltar à loja</NuxtLink>

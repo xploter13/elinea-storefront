@@ -50,7 +50,7 @@ function goBack() {
 
 <template>
   <div class="checkout-shell">
-    <SharedCommerceHeader :store-name="storefront.site.name" step="Entrega e pagamento" />
+    <SharedCommerceHeader :store-name="storefront.site.name" :logo-url="storefront.theme?.logo_url" step="Entrega e pagamento" />
     <main class="checkout-layout">
       <div class="checkout-main">
         <NuxtLink to="/carrinho" class="back"><ChevronLeft :size="17" /> Voltar ao carrinho</NuxtLink>
