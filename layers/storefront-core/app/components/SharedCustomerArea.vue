@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vMask } from '~/utils/input-mask'
 import { ArrowRight, ChevronRight, CircleUserRound, House, LogIn, MapPin, Package, UserRound } from '@lucide/vue'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import type { Customer } from '@elinea/sdk'
@@ -64,7 +65,7 @@ async function logout() {
 
         <div v-else-if="section === 'orders'" class="empty-state"><div class="state-icon"><Package :size="28"/></div><h2>Nenhum pedido por aqui.</h2><p>Quando você fizer uma compra, os detalhes e o rastreamento aparecerão nesta página.</p><NuxtLink to="/produtos">Explorar produtos <ChevronRight :size="17"/></NuxtLink></div>
         <div v-else-if="section === 'addresses'" class="empty-state"><div class="state-icon"><MapPin :size="28"/></div><h2>Você ainda não salvou endereços.</h2><p>Salve seus locais de entrega para finalizar as próximas compras mais rápido.</p><button type="button" disabled>Adicionar endereço</button><small>Disponível após entrar na sua conta.</small></div>
-        <form v-else class="profile-form" @submit.prevent><div class="field-row"><label>Nome<input autocomplete="given-name" placeholder="Seu nome" disabled></label><label>Sobrenome<input autocomplete="family-name" placeholder="Seu sobrenome" disabled></label></div><label>E-mail<input type="email" autocomplete="email" placeholder="voce@email.com" disabled></label><label>Telefone<input type="tel" autocomplete="tel" placeholder="(00) 00000-0000" disabled></label><button type="submit" disabled>Salvar alterações</button><small>Entre na sua conta para editar os dados.</small></form>
+        <form v-else class="profile-form" @submit.prevent><div class="field-row"><label>Nome<input autocomplete="given-name" placeholder="Seu nome" disabled></label><label>Sobrenome<input autocomplete="family-name" placeholder="Seu sobrenome" disabled></label></div><label>E-mail<input type="email" autocomplete="email" placeholder="voce@email.com" disabled></label><label>Telefone<input inputmode="tel" v-mask="'phone'" type="tel" autocomplete="tel" placeholder="(00) 00000-0000" disabled></label><button type="submit" disabled>Salvar alterações</button><small>Entre na sua conta para editar os dados.</small></form>
       </section>
     </main>
   </div>

@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vMask } from '~/utils/input-mask'
 import { ArrowRight, Eye, EyeOff, Headset, MapPin, PackageCheck, ShieldCheck, UserRoundPlus } from '@lucide/vue'
 import BaseTemplate from '~/components/BaseTemplate.vue'
 import type { StorefrontPage } from '~/utils/storefront-page'
@@ -91,7 +92,7 @@ async function submit() {
               <span v-if="fieldErrors.email" class="field-error">{{ fieldErrors.email }}</span>
 
               <label for="register-phone">Telefone <span class="optional">opcional</span></label>
-              <input id="register-phone" v-model="form.phone" type="tel" autocomplete="tel" placeholder="(00) 00000-0000" :aria-invalid="Boolean(fieldErrors.phone)" @input="clearError('phone')">
+              <input inputmode="tel" v-mask="'phone'" id="register-phone" v-model="form.phone" type="tel" autocomplete="tel" placeholder="(00) 00000-0000" :aria-invalid="Boolean(fieldErrors.phone)" @input="clearError('phone')">
               <span v-if="fieldErrors.phone" class="field-error">{{ fieldErrors.phone }}</span>
 
               <label for="register-password">Senha</label>

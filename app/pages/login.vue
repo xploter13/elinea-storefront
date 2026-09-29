@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vMask } from '~/utils/input-mask'
 import { ArrowRight, Headset, MapPin, PackageCheck, ShieldCheck } from '@lucide/vue'
 import BaseTemplate from '~/components/BaseTemplate.vue'
 import type { StorefrontPage } from '~/utils/storefront-page'
@@ -83,7 +84,7 @@ async function submit() {
                 <label v-if="useRecoveryCode" for="login-recovery">Código de recuperação</label>
                 <input v-if="useRecoveryCode" id="login-recovery" v-model.trim="form.recoveryCode" autocomplete="off" placeholder="Digite seu código" required>
                 <label v-if="!useRecoveryCode" for="login-code">Código do autenticador</label>
-                <input v-if="!useRecoveryCode" id="login-code" v-model.trim="form.code" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" required>
+                <input v-mask="'otp'" v-if="!useRecoveryCode" id="login-code" v-model.trim="form.code" inputmode="numeric" autocomplete="one-time-code" placeholder="000000" required>
                 <div class="two-factor-actions"><button type="button" @click="useRecoveryCode = !useRecoveryCode">{{ useRecoveryCode ? 'Usar aplicativo autenticador' : 'Usar código de recuperação' }}</button><button type="button" @click="backToPassword">Voltar</button></div>
               </template>
               <p v-if="errorMessage" role="alert" class="error">{{ errorMessage }}</p>

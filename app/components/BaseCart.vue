@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vMask } from '~/utils/input-mask'
 import { ArrowRight, ChevronDown, Minus, Plus, ShoppingBasket, Ticket, Truck, X } from '@lucide/vue'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
@@ -27,7 +28,7 @@ onMounted(initialize)
         <NuxtLink to="/" class="continue-shopping"><ArrowRight :size="15"/> Continuar comprando</NuxtLink>
       </section>
       <aside class="cart-aside">
-        <section class="aside-box shipping-box"><h2><Truck :size="19"/> Estimar frete <ChevronDown :size="17"/></h2><label>CEP<input inputmode="numeric" placeholder="00000-000"></label><button type="button" class="outline-action">Calcular frete</button></section>
+        <section class="aside-box shipping-box"><h2><Truck :size="19"/> Estimar frete <ChevronDown :size="17"/></h2><label>CEP<input v-mask="'zipcode'" inputmode="numeric" placeholder="00000-000"></label><button type="button" class="outline-action">Calcular frete</button></section>
         <section class="aside-box coupon-box"><h2><Ticket :size="18"/> Cupom de desconto <ChevronDown :size="17"/></h2><div class="coupon-input"><input placeholder="Código do cupom"><button type="button">Aplicar</button></div></section>
         <section class="aside-box total-box"><dl><div><dt>Subtotal ({{ cart.totals.items_count }} itens)</dt><dd>{{ money(cart.totals.items_total) }}</dd></div><div><dt>Frete</dt><dd>A calcular</dd></div><div class="grand-total"><dt>Total</dt><dd>{{ money(cart.totals.total) }}</dd></div></dl><p class="free-shipping">Adicione mais produtos para ganhar frete grátis.</p><div class="shipping-progress"><span></span></div><NuxtLink to="/checkout" class="checkout-button">Finalizar compra <ArrowRight :size="16"/></NuxtLink><div class="aside-links"><NuxtLink to="/carrinho">Ver carrinho</NuxtLink><button type="button">Compartilhar carrinho</button></div></section>
       </aside>

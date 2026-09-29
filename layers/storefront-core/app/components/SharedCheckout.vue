@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vMask } from '~/utils/input-mask'
 import { Check, ChevronLeft, CreditCard, MapPin, PackageCheck, Truck } from '@lucide/vue'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import { useStorefrontCatalog } from '../composables/useStorefrontCatalog'
@@ -23,12 +24,12 @@ onMounted(initialize)
         <form @submit.prevent>
           <section class="form-section">
             <div class="section-title"><span>01</span><div><h2>Contato</h2><p>Usaremos estes dados para avisar sobre o pedido.</p></div></div>
-            <div class="field-grid"><label class="wide">E-mail<input type="email" autocomplete="email" placeholder="voce@email.com"></label><label>Nome<input autocomplete="given-name" placeholder="Seu nome"></label><label>Sobrenome<input autocomplete="family-name" placeholder="Seu sobrenome"></label><label>CPF<input inputmode="numeric" placeholder="000.000.000-00"></label><label>Telefone<input type="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label></div>
+            <div class="field-grid"><label class="wide">E-mail<input type="email" autocomplete="email" placeholder="voce@email.com"></label><label>Nome<input autocomplete="given-name" placeholder="Seu nome"></label><label>Sobrenome<input autocomplete="family-name" placeholder="Seu sobrenome"></label><label>CPF<input v-mask="'cpf'" inputmode="numeric" placeholder="000.000.000-00"></label><label>Telefone<input inputmode="tel" v-mask="'phone'" type="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label></div>
           </section>
 
           <section class="form-section">
             <div class="section-title"><span>02</span><div><h2>Entrega</h2><p>Informe onde você quer receber.</p></div></div>
-            <div class="field-grid"><label>CEP<input autocomplete="postal-code" inputmode="numeric" placeholder="00000-000"></label><label class="wide">Endereço<input autocomplete="street-address" placeholder="Rua e número"></label><label>Complemento<input placeholder="Apto, bloco (opcional)"></label><label>Bairro<input placeholder="Seu bairro"></label><label>Cidade<input autocomplete="address-level2" placeholder="Sua cidade"></label><label>Estado<select autocomplete="address-level1"><option>Selecione</option><option>SP</option><option>RJ</option><option>MG</option></select></label></div>
+            <div class="field-grid"><label>CEP<input v-mask="'zipcode'" autocomplete="postal-code" inputmode="numeric" placeholder="00000-000"></label><label class="wide">Endereço<input autocomplete="street-address" placeholder="Rua e número"></label><label>Complemento<input placeholder="Apto, bloco (opcional)"></label><label>Bairro<input placeholder="Seu bairro"></label><label>Cidade<input autocomplete="address-level2" placeholder="Sua cidade"></label><label>Estado<select autocomplete="address-level1"><option>Selecione</option><option>SP</option><option>RJ</option><option>MG</option></select></label></div>
             <div class="delivery-options"><button type="button" :class="{selected:delivery==='standard'}" @click="delivery='standard'"><Truck :size="20"/><span><strong>Entrega padrão</strong><small>Prazo calculado pelo CEP</small></span><em>A calcular</em></button><button type="button" :class="{selected:delivery==='express'}" @click="delivery='express'"><PackageCheck :size="20"/><span><strong>Entrega expressa</strong><small>Quando disponível para a região</small></span><em>A calcular</em></button></div>
           </section>
 

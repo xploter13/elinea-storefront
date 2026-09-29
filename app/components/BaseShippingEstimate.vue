@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vMask } from '~/utils/input-mask'
 import { Truck } from '@lucide/vue'
 import type { ShippingOption, ShippingProvider } from '@elinea/sdk'
 
@@ -71,7 +72,7 @@ const money = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'curren
     <form class="shipping-form" @submit.prevent="calculateShipping">
       <label for="shipping-zipcode">CEP de entrega</label>
       <div class="shipping-controls">
-        <input id="shipping-zipcode" v-model="zipcode" type="text" inputmode="numeric" autocomplete="postal-code" maxlength="9" placeholder="00000-000" :aria-invalid="Boolean(errorMessage)" aria-describedby="shipping-feedback">
+        <input v-mask="'zipcode'" id="shipping-zipcode" v-model="zipcode" type="text" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" :aria-invalid="Boolean(errorMessage)" aria-describedby="shipping-feedback">
         <button type="submit" :disabled="loading">{{ loading ? 'Calculando...' : 'Calcular' }}</button>
       </div>
     </form>

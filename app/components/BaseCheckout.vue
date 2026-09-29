@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { vMask } from '~/utils/input-mask'
 import { Check, ChevronLeft, CreditCard, MapPin, PackageCheck, Truck } from '@lucide/vue'
 import type { Customer, CustomerAddress } from '@elinea/sdk'
 import type { StorefrontPayload } from '#shared/types/storefront'
@@ -60,12 +61,12 @@ function goBack() {
           <section v-if="currentStep===1" class="form-section">
             <div class="section-title"><span>01</span><div><h2>Contato</h2><p>Usaremos estes dados para avisar sobre o pedido.</p></div></div>
             <p v-if="customer" class="customer-note">Dados de {{ customer.name }} carregados da sua conta. Você pode ajustá-los para esta compra.</p>
-            <div class="field-grid"><label class="wide">E-mail<input v-model="contact.email" type="email" autocomplete="email" placeholder="voce@email.com"></label><label>Nome<input v-model="contact.firstName" autocomplete="given-name" placeholder="Seu nome"></label><label>Sobrenome<input v-model="contact.lastName" autocomplete="family-name" placeholder="Seu sobrenome"></label><label>CPF<input v-model="contact.document" inputmode="numeric" placeholder="000.000.000-00"></label><label>Telefone<input v-model="contact.phone" type="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label></div>
+            <div class="field-grid"><label class="wide">E-mail<input v-model="contact.email" type="email" autocomplete="email" placeholder="voce@email.com"></label><label>Nome<input v-model="contact.firstName" autocomplete="given-name" placeholder="Seu nome"></label><label>Sobrenome<input v-model="contact.lastName" autocomplete="family-name" placeholder="Seu sobrenome"></label><label>CPF<input v-mask="'cpf'" v-model="contact.document" inputmode="numeric" placeholder="000.000.000-00"></label><label>Telefone<input inputmode="tel" v-mask="'phone'" v-model="contact.phone" type="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label></div>
           </section>
 
           <section v-else-if="currentStep===2" class="form-section">
             <div class="section-title"><span>02</span><div><h2>Entrega</h2><p>Etapa 2: informe onde você quer receber.</p></div></div>
-            <div class="field-grid"><label>CEP<input v-model="address.zipcode" autocomplete="postal-code" inputmode="numeric" placeholder="00000-000"></label><label class="wide">Rua / avenida<input v-model="address.street" autocomplete="address-line1" placeholder="Nome da rua"></label><label>Número<input v-model="address.number" autocomplete="address-line2" placeholder="Número"></label><label>Complemento<input v-model="address.complement" placeholder="Apto, bloco (opcional)"></label><label>Bairro<input v-model="address.district" placeholder="Seu bairro"></label><label>Cidade<input v-model="address.city" autocomplete="address-level2" placeholder="Sua cidade"></label><label>Estado<select v-model="address.state" autocomplete="address-level1"><option value="" disabled>Selecione</option><option v-for="state in states" :key="state" :value="state">{{ state }}</option></select></label></div>
+            <div class="field-grid"><label>CEP<input v-mask="'zipcode'" v-model="address.zipcode" autocomplete="postal-code" inputmode="numeric" placeholder="00000-000"></label><label class="wide">Rua / avenida<input v-model="address.street" autocomplete="address-line1" placeholder="Nome da rua"></label><label>Número<input v-model="address.number" autocomplete="address-line2" placeholder="Número"></label><label>Complemento<input v-model="address.complement" placeholder="Apto, bloco (opcional)"></label><label>Bairro<input v-model="address.district" placeholder="Seu bairro"></label><label>Cidade<input v-model="address.city" autocomplete="address-level2" placeholder="Sua cidade"></label><label>Estado<select v-model="address.state" autocomplete="address-level1"><option value="" disabled>Selecione</option><option v-for="state in states" :key="state" :value="state">{{ state }}</option></select></label></div>
             <div class="delivery-options"><button type="button" :class="{selected:delivery==='standard'}" @click="delivery='standard'"><Truck :size="20"/><span><strong>Entrega padrão</strong><small>Prazo calculado pelo CEP</small></span><em>A calcular</em></button><button type="button" :class="{selected:delivery==='express'}" @click="delivery='express'"><PackageCheck :size="20"/><span><strong>Entrega expressa</strong><small>Quando disponível para a região</small></span><em>A calcular</em></button></div>
           </section>
 
@@ -73,8 +74,8 @@ function goBack() {
             <div class="section-title"><span>03</span><div><h2>Pagamento</h2><p>{{ paymentStarted ? 'Etapa 3: escolha uma forma de pagamento para continuar o teste.' : 'Etapa 3: disponível depois de confirmar o endereço.' }}</p></div></div>
             <div class="payment-preview"><CreditCard :size="21"/><span>Cartão, Pix e outras formas de pagamento</span></div>
             <div v-if="paymentStarted" class="payment-fields">
-              <label>Número do cartão<input inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000"></label>
-              <div><label>Validade<input inputmode="numeric" autocomplete="cc-exp" placeholder="MM/AA"></label><label>CVV<input inputmode="numeric" autocomplete="cc-csc" placeholder="000"></label></div>
+              <label>Número do cartão<input v-mask="'card'" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000"></label>
+              <div><label>Validade<input v-mask="'expiry'" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/AA"></label><label>CVV<input v-mask="'cvv'" inputmode="numeric" autocomplete="cc-csc" placeholder="000"></label></div>
             </div>
           </section>
           <div class="checkout-actions"><button v-if="currentStep>1" type="button" class="back-step" @click="goBack"><ChevronLeft :size="16"/> Voltar</button><button type="button" class="continue" @click="continueToPayment">{{ orderReviewed ? 'Pedido pronto para enviar' : currentStep===1 ? 'Continuar para entrega' : currentStep===2 ? 'Continuar para pagamento' : 'Continuar e revisar pedido' }}</button></div>
