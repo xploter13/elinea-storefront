@@ -17,9 +17,19 @@ const { addToCart, toggleWishlist, isWishlisted, busyProducts } = useStorefrontC
 
 const wished = computed(() => isWishlisted(props.product.id))
 const busy = computed(() => busyProducts.value.includes(props.product.id))
-const hasSale = computed(() => Boolean(props.product.original_price && props.product.original_price > props.product.price))
+const displayedProduct = computed(() => ({
+  ...props.product,
+  price: selectedVariation.value?.price ?? props.product.price,
+  original_price: selectedVariation.value ? selectedVariation.value.original_price : props.product.original_price,
+}))
+const hasSale = computed(() => Boolean(displayedProduct.value.original_price && displayedProduct.value.original_price > displayedProduct.value.price))
 const stockLabel = computed(() => props.product.stock > 0 ? `${props.product.stock} em estoque` : 'Indisponível')
-const images = computed(() => Array.from(new Set([productImage(props.product), ...props.product.variations.map(variation => variation.image_path)].filter((image): image is string => Boolean(image)))))
+const images = computed(() => {
+  const sources = selectedVariation.value
+    ? [selectedVariation.value.image_path]
+    : [productImage(props.product), ...props.product.variations.map(variation => variation.image_path)]
+  return Array.from(new Set(sources.filter((image): image is string => Boolean(image))))
+})
 const currentImage = computed(() => images.value[selectedImage.value] || '/images/placeholders/product-default.png')
 const relatedProducts = computed(() => props.storefront.products.filter(product => product.id !== props.product.id))
 const recentlyViewed = computed(() => relatedProducts.value.slice(0, 4))
@@ -30,7 +40,15 @@ const specificationRows = computed(() => [['SKU', props.product.sku], ['Categori
 
 watch(images, () => { if (selectedImage.value >= images.value.length) selectedImage.value = 0 }, { immediate: true })
 const changeQuantity = (value: number) => { quantity.value = Math.min(Math.max(1, value), Math.max(1, props.product.stock)) }
-const selectVariation = (variation: ProductVariation) => { selectedVariation.value = variation; const imageIndex = images.value.indexOf(variation.image_path || ''); if (imageIndex >= 0) selectedImage.value = imageIndex }
+const selectVariation = (variation: ProductVariation) => {
+  selectedVariation.value = variation
+  selectedImage.value = 0
+}
+watch(() => props.product, () => {
+  selectedVariation.value = null
+  selectedImage.value = 0
+  quantity.value = 1
+})
 const shareProduct = async () => { if (import.meta.client && navigator.share) { await navigator.share({ title: props.product.name, url: window.location.href }).catch(() => undefined); return }; if (import.meta.client && navigator.clipboard) { await navigator.clipboard.writeText(window.location.href); copied.value = true; window.setTimeout(() => { copied.value = false }, 1800) } }
 const addProductToCart = () => addToCart(props.product, quantity.value)
 </script>
@@ -41,16 +59,16 @@ const addProductToCart = () => addToCart(props.product, quantity.value)
     <div class="product-detail-grid">
       <section class="product-gallery" :class="{ 'single-image': images.length <= 1 }" aria-label="Galeria do produto">
         <div v-if="images.length > 1" class="gallery-thumbs"><button v-for="(image, index) in images" :key="image" type="button" class="gallery-thumb" :class="{ active: selectedImage === index }" :aria-label="`Ver imagem ${index + 1}`" @click="selectedImage = index"><img :src="image" :alt="`${product.name} - imagem ${index + 1}`" @error="usePlaceholder"></button></div>
-        <div class="gallery-stage"><div class="stage-badges"><span v-if="hasSale" class="stage-badge sale">-{{ discount(product) }}%</span><span v-if="product.is_featured" class="stage-badge featured">Destaque</span></div><img :src="currentImage" :alt="product.name" @error="usePlaceholder"><button v-if="images.length > 1" type="button" class="gallery-arrow previous" aria-label="Imagem anterior" @click="selectedImage = (selectedImage - 1 + images.length) % images.length"><ArrowLeft :size="19" /></button><button v-if="images.length > 1" type="button" class="gallery-arrow next" aria-label="Próxima imagem" @click="selectedImage = (selectedImage + 1) % images.length"><ArrowRight :size="19" /></button><span v-if="images.length > 1" class="gallery-count">{{ selectedImage + 1 }} / {{ images.length }}</span></div>
+        <div class="gallery-stage"><div class="stage-badges"><span v-if="hasSale" class="stage-badge sale">-{{ discount(displayedProduct) }}%</span><span v-if="product.is_featured" class="stage-badge featured">Destaque</span></div><img :src="currentImage" :alt="product.name" @error="usePlaceholder"><button v-if="images.length > 1" type="button" class="gallery-arrow previous" aria-label="Imagem anterior" @click="selectedImage = (selectedImage - 1 + images.length) % images.length"><ArrowLeft :size="19" /></button><button v-if="images.length > 1" type="button" class="gallery-arrow next" aria-label="Próxima imagem" @click="selectedImage = (selectedImage + 1) % images.length"><ArrowRight :size="19" /></button><span v-if="images.length > 1" class="gallery-count">{{ selectedImage + 1 }} / {{ images.length }}</span></div>
       </section>
       <section class="product-summary">
         <div class="summary-kicker"><span>{{ product.categories[0]?.name || 'Coleção Elínea' }}</span><span class="availability"><Check :size="13" /> {{ stockLabel }}</span></div>
         <h1>{{ product.name }}</h1><p class="summary-excerpt">{{ product.excerpt || product.description || 'Uma escolha selecionada para tornar sua rotina mais simples, prática e confiável.' }}</p>
         <div class="summary-meta"><div class="rating"><Star v-for="star in 5" :key="star" :size="15" fill="currentColor" /><span>Produto selecionado</span></div><span class="meta-divider"></span><span>SKU: <strong>{{ product.sku }}</strong></span></div>
-        <div class="price-row"><div><s v-if="hasSale">{{ money(product.original_price!) }}</s><strong>{{ money(product.price) }}</strong><small>à vista</small></div><span v-if="hasSale" class="save-pill">Economize {{ discount(product) }}%</span></div>
+        <div class="price-row" aria-live="polite"><div><s v-if="hasSale">{{ money(displayedProduct.original_price!) }}</s><strong>{{ money(displayedProduct.price) }}</strong><small>à vista</small></div><span v-if="hasSale" class="save-pill">Economize {{ discount(displayedProduct) }}%</span></div>
         <div class="register-promo"><div class="promo-mark">✦</div><div><strong>Sua conta nesta loja</strong><span>Crie uma conta para acompanhar pedidos e manter seus endereços salvos.</span></div><NuxtLink to="/cadastro">Cadastrar <ArrowRight :size="15" /></NuxtLink></div>
         <BaseShippingEstimate v-if="shippingProvider" :product-id="product.id" :quantity="quantity" :provider="shippingProvider" />
-        <div v-if="variationChoices.length" class="variation-group"><div class="variation-heading"><strong>Opções</strong><span>{{ selectedVariation?.name || 'Selecione uma opção' }}</span></div><div class="variation-list"><button v-for="variation in variationChoices" :key="variation.sku" type="button" class="variation-button" :class="{ selected: selectedVariation?.sku === variation.sku, unavailable: variation.stock < 1 }" :disabled="variation.stock < 1" @click="selectVariation(variation)">{{ variation.name || Object.values(variation.attributes).join(' / ') }}<Check v-if="selectedVariation?.sku === variation.sku" :size="14" /></button></div></div>
+        <div v-if="variationChoices.length" class="variation-group"><div class="variation-heading"><strong>Opções</strong><span>{{ selectedVariation?.name || 'Selecione uma opção' }}</span></div><div class="variation-list"><button v-for="variation in variationChoices" :key="variation.sku" type="button" class="variation-button" :class="{ selected: selectedVariation?.sku === variation.sku, unavailable: variation.stock < 1 }" :aria-pressed="selectedVariation?.sku === variation.sku" :disabled="variation.stock < 1" @click="selectVariation(variation)">{{ variation.name || Object.values(variation.attributes).join(' / ') }}<Check v-if="selectedVariation?.sku === variation.sku" :size="14" /></button></div></div>
         <div class="purchase-row"><div class="quantity-control" aria-label="Quantidade"><button type="button" aria-label="Diminuir quantidade" @click="changeQuantity(quantity - 1)"><Minus :size="17" /></button><span>{{ String(quantity).padStart(2, '0') }}</span><button type="button" aria-label="Aumentar quantidade" @click="changeQuantity(quantity + 1)"><Plus :size="17" /></button></div><button class="primary-buy" type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart"><span v-if="busy" class="loading loading-spinner loading-sm"></span><ShoppingCart v-else :size="18" />{{ product.stock < 1 ? 'Produto indisponível' : 'Adicionar ao carrinho' }}</button><button class="wishlist-button" :class="{ active: wished }" type="button" :aria-label="wished ? 'Remover da lista de desejos' : 'Adicionar à lista de desejos'" :aria-pressed="wished" @click="toggleWishlist(product)"><Heart :size="19" :fill="wished ? 'currentColor' : 'none'" /></button></div>
         <button class="buy-now" type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart">Comprar agora</button>
         <div class="action-links"><button type="button" @click="shareProduct"><Copy v-if="copied" :size="16" /><Share2 v-else :size="16" />{{ copied ? 'Link copiado' : 'Compartilhar' }}</button><button type="button" @click="toggleWishlist(product)"><Heart :size="16" :fill="wished ? 'currentColor' : 'none'" />{{ wished ? 'Salvo na lista' : 'Adicionar à lista' }}</button></div>
@@ -59,7 +77,7 @@ const addProductToCart = () => addToCart(props.product, quantity.value)
     </div>
     <section class="product-lower-grid"><div class="product-tabs-panel"><div class="product-tabs" role="tablist"><button type="button" :class="{ active: activeTab === 'description' }" @click="activeTab = 'description'">Descrição</button><button type="button" :class="{ active: activeTab === 'specification' }" @click="activeTab = 'specification'">Especificações</button><button type="button" disabled>Avaliações</button><button type="button" disabled>Dúvidas</button></div><div v-if="activeTab === 'description'" class="tab-content"><h2>Sobre este produto</h2><p>{{ product.description || product.excerpt || 'Este produto foi selecionado para oferecer uma experiência de compra clara e confiável.' }}</p><p v-if="product.excerpt && product.description">{{ product.excerpt }}</p><div class="content-highlight"><PackageCheck :size="22" /><span><strong>Escolha verificada pela Elínea</strong><small>Informações de estoque e preço atualizadas para esta loja.</small></span></div></div><div v-else class="tab-content"><h2>Informações do produto</h2><dl class="specification-list"><div v-for="row in specificationRows" :key="row[0]"><dt>{{ row[0] }}</dt><dd>{{ row[1] }}</dd></div></dl></div></div><aside class="viewed-panel"><div class="panel-tabs"><strong>Recomendados</strong><span>Para você</span></div><NuxtLink v-for="item in recentlyViewed" :key="item.id" :to="`/produto/${item.slug}`" class="mini-product"><div class="mini-image"><img v-if="productImage(item)" :src="productImage(item)!" :alt="item.name" @error="usePlaceholder"><Eye :size="14" /></div><div><span class="mini-stars"><Star v-for="star in 5" :key="star" :size="11" fill="currentColor" /></span><strong>{{ item.name }}</strong><span><s v-if="item.original_price && item.original_price > item.price">{{ money(item.original_price) }}</s> {{ money(item.price) }}</span></div></NuxtLink></aside></section>
     <section v-if="recommended.length" class="frequent-section"><div class="frequent-heading"><div><span>Curadoria Elínea</span><h2>Você também pode gostar</h2></div><p>Complete sua próxima compra com produtos selecionados para você.</p></div><div class="frequent-list"><BaseProductCard v-for="item in recommended" :key="item.id" :product="item" :storefront="storefront" /></div></section>
-    <div class="mobile-buy-bar"><div><small>{{ quantity }} item{{ quantity === 1 ? '' : 's' }}</small><strong>{{ money(product.price * quantity) }}</strong></div><button type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart"><ShoppingCart :size="17" /> Adicionar</button></div>
+    <div class="mobile-buy-bar"><div><small>{{ quantity }} item{{ quantity === 1 ? '' : 's' }}</small><strong>{{ money(displayedProduct.price * quantity) }}</strong></div><button type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart"><ShoppingCart :size="17" /> Adicionar</button></div>
   </main>
 </template>
 
@@ -77,5 +95,12 @@ const addProductToCart = () => addToCart(props.product, quantity.value)
 .product-gallery.single-image{grid-template-columns:1fr}
 .product-gallery.single-image .gallery-stage>img{transform:scale(1.14)}
 @media(max-width:520px){.gallery-stage>img{min-height:0;padding:5px;transform:scale(1.04)}}
-@media(max-width:780px){.gallery-stage{height:clamp(360px,72vw,480px)}}
+@media(max-width:780px){
+  .product-detail-page{box-sizing:border-box;width:100%;min-width:0}
+  .product-detail-grid,.product-gallery,.product-gallery.single-image{grid-template-columns:minmax(0,1fr)}
+  .product-gallery{width:100%;max-width:100%;align-self:start}
+  .gallery-stage{box-sizing:border-box;width:100%;max-width:100%;min-width:0;height:auto;min-height:0;aspect-ratio:1 / 1}
+  .gallery-stage>img,.product-gallery.single-image .gallery-stage>img{box-sizing:border-box;width:100%;height:100%;max-width:100%;max-height:100%;min-height:0;padding:12px;object-fit:contain;transform:none}
+  .gallery-thumbs{min-width:0;max-width:100%;overscroll-behavior-x:contain}
+}
 </style>

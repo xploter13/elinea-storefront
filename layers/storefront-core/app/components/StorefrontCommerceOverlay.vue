@@ -14,24 +14,61 @@ const {
   initialize, addToCart, updateQuantity, removeFromCart, toggleWishlist,
 } = useStorefrontCommerce(props.storefront)
 
+const cartPanel = ref<HTMLElement | null>(null)
+const closeButton = ref<HTMLButtonElement | null>(null)
+let previousFocus: HTMLElement | null = null
+let previousOverflow = ''
+let scrollLocked = false
+
+const closeCart = () => { cartOpen.value = false }
+const handleCartKeydown = (event: KeyboardEvent) => {
+  if (event.key === 'Escape') {
+    event.preventDefault()
+    closeCart()
+  }
+  if (event.key !== 'Tab') return
+  const focusable = cartPanel.value?.querySelectorAll<HTMLElement>('a[href], button:not([disabled]), input:not([disabled]), [tabindex="0"]')
+  const first = focusable?.[0]
+  const last = focusable?.[focusable.length - 1]
+  if (!first || !last) return
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault()
+    last.focus()
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault()
+    first.focus()
+  }
+}
+
 onMounted(initialize)
-watch(cartOpen, (open) => {
+watch(cartOpen, async (open) => {
   if (!import.meta.client) return
-  document.body.style.overflow = open ? 'hidden' : ''
-})
+  if (open) {
+    previousFocus = document.activeElement instanceof HTMLElement ? document.activeElement : null
+    previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    scrollLocked = true
+    await nextTick()
+    if (cartOpen.value) closeButton.value?.focus()
+  } else if (scrollLocked) {
+    document.body.style.overflow = previousOverflow
+    scrollLocked = false
+    previousFocus?.focus()
+  }
+}, { immediate: true })
 onBeforeUnmount(() => {
-  if (import.meta.client) document.body.style.overflow = ''
+  if (import.meta.client && scrollLocked) document.body.style.overflow = previousOverflow
 })
 </script>
 
 <template>
   <Transition name="cart-drawer">
-    <div v-if="cartOpen" class="commerce-drawer" role="dialog" aria-modal="true" aria-label="Seu carrinho">
-      <button class="drawer-overlay" aria-label="Fechar carrinho" @click="cartOpen=false"></button>
-      <aside class="commerce-panel">
+    <div v-if="cartOpen" class="commerce-drawer" role="dialog" aria-modal="true" aria-label="Seu carrinho" @keydown="handleCartKeydown">
+      <button class="cart-backdrop" type="button" tabindex="-1" aria-label="Fechar carrinho" @click="closeCart"></button>
+      <aside ref="cartPanel" class="commerce-panel">
         <header class="cart-header">
           <div class="cart-title"><ShoppingBag :size="20"/><div><strong>Seu carrinho</strong><span>{{ cart.totals.items_count }} {{ cart.totals.items_count === 1 ? 'item' : 'itens' }}</span></div></div>
-          <button class="close-cart" type="button" aria-label="Fechar carrinho" @click="cartOpen=false"><X :size="19"/></button>
+          <button ref="closeButton" class="close-cart" type="button" aria-label="Fechar carrinho" @click="cartOpen=false"><X :size="19"/></button>
         </header>
 
         <div v-if="cartProducts.length" class="cart-items">
@@ -85,7 +122,7 @@ onBeforeUnmount(() => {
 </template>
 
 <style scoped>
-.commerce-drawer{position:fixed;inset:0;z-index:90;display:block;pointer-events:auto}.commerce-drawer .drawer-toggle{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}.commerce-drawer .drawer-side{position:absolute;inset:0;display:grid;grid-template-columns:minmax(0,1fr) min(92vw,440px);height:100%}.commerce-drawer .drawer-overlay{width:100%;height:100%;border:0;background:rgba(15,23,42,.42);cursor:pointer}.commerce-panel{display:flex;flex-direction:column;width:min(92vw,440px);min-height:100%;margin:0;background:#fff;color:#111827;box-shadow:-24px 0 70px rgba(15,23,42,.18);overflow:hidden}.commerce-panel header{flex:0 0 auto}.commerce-panel>div{min-height:0}.commerce-panel footer{flex:0 0 auto}
-@media(max-width:560px){.commerce-drawer .drawer-side{grid-template-columns:1fr}.commerce-drawer .drawer-overlay{display:none}.commerce-panel{width:100vw}}
-.commerce-drawer{position:fixed;inset:0;z-index:90;display:flex;justify-content:flex-end;background:rgba(15,23,42,.42)}.drawer-overlay{position:absolute;inset:0;border:0;background:transparent;cursor:pointer}.commerce-panel{position:relative;z-index:1;display:flex;width:min(100%,470px);height:100%;min-height:100%;flex-direction:column;background:#fff;color:#111827;box-shadow:-24px 0 70px rgba(15,23,42,.2);overflow:hidden}.cart-drawer-enter-active,.cart-drawer-leave-active{transition:opacity .28s ease}.cart-drawer-enter-active .commerce-panel,.cart-drawer-leave-active .commerce-panel{transition:transform .32s cubic-bezier(.22,1,.36,1)}.cart-drawer-enter-from,.cart-drawer-leave-to{opacity:0}.cart-drawer-enter-from .commerce-panel,.cart-drawer-leave-to .commerce-panel{transform:translateX(100%)}.cart-header{display:flex;align-items:center;justify-content:space-between;padding:25px 26px 20px;border-bottom:1px solid #eaecf0}.cart-title{display:flex;align-items:center;gap:11px;color:#101828}.cart-title svg{color:var(--sf-primary)}.cart-title div{display:grid;gap:3px}.cart-title strong{font-size:18px}.cart-title span{color:#667085;font-size:11px}.close-cart{display:grid;width:34px;height:34px;place-items:center;border:0;border-radius:50%;background:#f2f4f7;color:#344054;cursor:pointer}.close-cart:hover{background:#e4e7ec;color:#1d4ed8}.cart-items{flex:1;overflow:auto;padding:0 26px}.cart-promo{display:flex;align-items:center;gap:8px;margin:16px 0;padding:10px 13px;border-radius:999px;background:#f2f4f7;color:#667085}.cart-promo span{font-size:16px}.cart-promo small{font-size:11px}.cart-item{display:grid;grid-template-columns:118px minmax(0,1fr);gap:15px;padding:17px 0;border-bottom:1px solid #eaecf0}.cart-item-image{position:relative;display:grid;width:118px;height:100px;place-items:center;margin:0;border-radius:9px;background:#f1f3f6}.cart-item-image img{width:100%;height:100%;object-fit:contain;padding:10px}.cart-item-image>button{position:absolute;right:7px;top:7px;display:grid;width:22px;height:22px;place-items:center;border:0;border-radius:50%;background:#fff;color:#101828;box-shadow:0 2px 8px rgba(15,23,42,.12);cursor:pointer}.cart-item-content{display:grid;align-content:center;gap:8px;min-width:0}.cart-item-content>a{overflow:hidden;color:#101828;font-size:13px;font-weight:700;line-height:1.35;text-decoration:none;text-overflow:ellipsis;white-space:nowrap}.cart-item-content>a:hover{color:var(--sf-primary)}.cart-item-content>strong{color:var(--sf-primary);font-size:14px}.cart-item-actions{display:flex;align-items:center;justify-content:space-between;gap:8px}.quantity-control{display:grid;grid-template-columns:28px 32px 28px;height:30px;align-items:center;border:1px solid #d0d5dd;border-radius:999px}.quantity-control button{display:grid;height:100%;place-items:center;border:0;background:none;color:#344054;cursor:pointer}.quantity-control button:disabled{cursor:wait;opacity:.5}.quantity-control span{text-align:center;font-size:11px;font-weight:700}.edit-item{border:0;background:none;color:#667085;font-size:10px;cursor:pointer}.edit-item:hover{color:#ef4444}.cart-empty{display:grid;flex:1;place-items:center;padding:30px;text-align:center}.cart-empty span{display:grid;width:72px;height:72px;margin:auto;place-items:center;border-radius:50%;background:#eff6ff;color:var(--sf-primary)}.cart-empty h3{margin:18px 0 6px;font-size:22px}.cart-empty p{margin:0;color:#667085;font-size:12px}.cart-empty button{height:40px;margin-top:18px;padding:0 17px;border:0;border-radius:999px;background:var(--sf-primary);color:#fff;font-size:12px;font-weight:700;cursor:pointer}.cart-footer{padding:20px 26px 24px;border-top:1px solid #eaecf0;background:#fff}.cart-subtotal{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:15px}.cart-subtotal span{color:#667085;font-size:13px}.cart-subtotal strong{font-size:22px}.checkout-button{display:flex;height:48px;align-items:center;justify-content:center;border-radius:999px;background:var(--sf-primary);color:#fff;font-size:13px;font-weight:750;text-decoration:none;transition:background .2s,transform .2s}.checkout-button:hover{background:#1d4ed8;transform:translateY(-1px)}.view-cart{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:13px;color:var(--sf-primary);font-size:11px;font-weight:700;text-decoration:none}.cart-footer p{margin:11px 0 0;text-align:center;color:#98a2b3;font-size:10px}@media(max-width:560px){.commerce-panel{width:100vw}.cart-header,.cart-items,.cart-footer{padding-right:18px;padding-left:18px}.cart-item{grid-template-columns:96px minmax(0,1fr);gap:12px}.cart-item-image{width:96px;height:88px}}
+.commerce-drawer{position:fixed;inset:0;z-index:100;display:flex;justify-content:flex-end;overflow:hidden;isolation:isolate}.cart-backdrop{position:absolute;inset:0;display:block;width:100%;height:100%;padding:0;border:0;background:rgba(15,23,42,.42);cursor:pointer}.commerce-panel{position:relative;z-index:1;display:flex;box-sizing:border-box;width:min(470px,calc(100% - 24px));max-width:100%;min-width:0;height:100%;max-height:100dvh;flex:0 0 auto;flex-direction:column;background:#fff;color:#111827;box-shadow:-24px 0 70px rgba(15,23,42,.2);overflow:hidden}.cart-header,.cart-footer{flex:0 0 auto}.commerce-panel>div{min-height:0}
+.cart-drawer-enter-active,.cart-drawer-leave-active{transition:opacity .28s ease}.cart-drawer-enter-active .commerce-panel,.cart-drawer-leave-active .commerce-panel{transition:transform .32s cubic-bezier(.22,1,.36,1)}.cart-drawer-enter-from,.cart-drawer-leave-to{opacity:0}.cart-drawer-enter-from .commerce-panel,.cart-drawer-leave-to .commerce-panel{transform:translateX(100%)}.cart-header{display:flex;align-items:center;justify-content:space-between;padding:25px 26px 20px;border-bottom:1px solid #eaecf0}.cart-title{display:flex;align-items:center;gap:11px;color:#101828}.cart-title svg{color:var(--sf-primary)}.cart-title div{display:grid;gap:3px}.cart-title strong{font-size:18px}.cart-title span{color:#667085;font-size:11px}.close-cart{display:grid;flex:0 0 44px;width:44px;height:44px;place-items:center;border:0;border-radius:50%;background:#f2f4f7;color:#344054;cursor:pointer}.close-cart:hover{background:#e4e7ec;color:#1d4ed8}.cart-items{flex:1;overflow:auto;padding:0 26px}.cart-promo{display:flex;align-items:center;gap:8px;margin:16px 0;padding:10px 13px;border-radius:999px;background:#f2f4f7;color:#667085}.cart-promo span{font-size:16px}.cart-promo small{font-size:11px}.cart-item{display:grid;grid-template-columns:118px minmax(0,1fr);gap:15px;padding:17px 0;border-bottom:1px solid #eaecf0}.cart-item-image{position:relative;display:grid;width:118px;height:100px;place-items:center;margin:0;border-radius:9px;background:#f1f3f6}.cart-item-image img{width:100%;height:100%;object-fit:contain;padding:10px}.cart-item-image>button{position:absolute;right:7px;top:7px;display:grid;width:22px;height:22px;place-items:center;border:0;border-radius:50%;background:#fff;color:#101828;box-shadow:0 2px 8px rgba(15,23,42,.12);cursor:pointer}.cart-item-content{display:grid;align-content:center;gap:8px;min-width:0}.cart-item-content>a{overflow:hidden;color:#101828;font-size:13px;font-weight:700;line-height:1.35;text-decoration:none;text-overflow:ellipsis;white-space:nowrap}.cart-item-content>a:hover{color:var(--sf-primary)}.cart-item-content>strong{color:var(--sf-primary);font-size:14px}.cart-item-actions{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:8px}.quantity-control{display:grid;grid-template-columns:28px 32px 28px;height:30px;align-items:center;border:1px solid #d0d5dd;border-radius:999px}.quantity-control button{display:grid;height:100%;place-items:center;border:0;background:none;color:#344054;cursor:pointer}.quantity-control button:disabled{cursor:wait;opacity:.5}.quantity-control span{text-align:center;font-size:11px;font-weight:700}.edit-item{border:0;background:none;color:#667085;font-size:10px;cursor:pointer}.edit-item:hover{color:#ef4444}.cart-empty{display:grid;flex:1;place-items:center;padding:30px;text-align:center}.cart-empty span{display:grid;width:72px;height:72px;margin:auto;place-items:center;border-radius:50%;background:#eff6ff;color:var(--sf-primary)}.cart-empty h3{margin:18px 0 6px;font-size:22px}.cart-empty p{margin:0;color:#667085;font-size:12px}.cart-empty button{height:40px;margin-top:18px;padding:0 17px;border:0;border-radius:999px;background:var(--sf-primary);color:#fff;font-size:12px;font-weight:700;cursor:pointer}.cart-footer{padding:20px 26px 24px;border-top:1px solid #eaecf0;background:#fff}.cart-subtotal{display:flex;align-items:baseline;justify-content:space-between;margin-bottom:15px}.cart-subtotal span{color:#667085;font-size:13px}.cart-subtotal strong{font-size:22px}.checkout-button{display:flex;height:48px;align-items:center;justify-content:center;border-radius:999px;background:var(--sf-primary);color:#fff;font-size:13px;font-weight:750;text-decoration:none;transition:background .2s,transform .2s}.checkout-button:hover{background:#1d4ed8;transform:translateY(-1px)}.view-cart{display:flex;align-items:center;justify-content:center;gap:5px;margin-top:13px;color:var(--sf-primary);font-size:11px;font-weight:700;text-decoration:none}.cart-footer p{margin:11px 0 0;text-align:center;color:#98a2b3;font-size:10px}@media(max-width:560px){.cart-header,.cart-items,.cart-footer{padding-right:18px;padding-left:18px}.cart-item{grid-template-columns:96px minmax(0,1fr);gap:12px}.cart-item-image{width:96px;height:88px}}
+@media(prefers-reduced-motion:reduce){.cart-drawer-enter-active,.cart-drawer-leave-active,.cart-drawer-enter-active .commerce-panel,.cart-drawer-leave-active .commerce-panel{transition:none}}
 </style>
