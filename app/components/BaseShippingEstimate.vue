@@ -1,15 +1,18 @@
 <script setup lang="ts">
+import { preferredShippingOption } from '#shared/utils/checkout-shipping'
 import { vMask } from '~/utils/input-mask'
 import { Truck } from '@lucide/vue'
 import type { ShippingOption, ShippingProvider } from '@elinea/sdk'
 
 const props = defineProps<{
+  siteSlug: string
   productId: number
   quantity: number
   provider: ShippingProvider
 }>()
 
-const zipcode = ref('')
+const shippingDestination = useShippingDestination(props.siteSlug)
+const zipcode = ref(shippingDestination.value?.zipcode || '')
 const options = ref<ShippingOption[]>([])
 const errorMessage = ref('')
 const loading = ref(false)
@@ -45,7 +48,11 @@ const calculateShipping = async () => {
       },
     })
 
-    if (sequence === requestSequence) options.value = response.data
+    if (sequence === requestSequence) {
+      options.value = response.data
+      const preferred = preferredShippingOption(response.data, shippingDestination.value)
+      if (preferred) shippingDestination.value = { zipcode: normalizedZipcode, provider: preferred.provider, serviceCode: preferred.serviceCode }
+    }
   } catch (error) {
     if (sequence === requestSequence) {
       const failure = error as { data?: { message?: string } }

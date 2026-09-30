@@ -31,3 +31,24 @@ test('order summary adds selected shipping to cart total with cent precision', (
   assert.equal(checkoutTotal(91, 0), 91)
   assert.equal(checkoutTotal(0.1, 0.2), 0.3)
 })
+
+test('reuses the preferred service with fresh prices for the full cart', async () => {
+  const { preferredShippingOption } = await import('../shared/utils/checkout-shipping.ts')
+  const destination = { zipcode: '01001000', provider: 'correios', serviceCode: '03220' }
+  const cartOptions = options.map(option => ({ ...option, price: option.price + 10 }))
+  assert.equal(preferredShippingOption(cartOptions, destination).price, 40)
+  assert.equal(preferredShippingOption(cartOptions, destination).serviceCode, '03220')
+  assert.equal(checkoutTotal(91, preferredShippingOption(cartOptions, destination).price), 131)
+})
+test('starts with cheapest available delivery and handles a removed preferred service', async () => {
+  const { preferredShippingOption } = await import('../shared/utils/checkout-shipping.ts')
+  assert.equal(preferredShippingOption([...options].reverse()).serviceCode, '03298')
+  assert.equal(preferredShippingOption(options, { zipcode: '01001000', provider: 'correios', serviceCode: 'removed' }).serviceCode, '03298')
+  assert.equal(preferredShippingOption([]), null)
+  assert.equal(preferredShippingOption([{ ...options[0], price: 0 }, options[1]]).price, 0)
+})
+test('shipping destinations are isolated by store', async () => {
+  const { shippingDestinationCookie } = await import('../shared/utils/checkout-shipping.ts')
+  assert.notEqual(shippingDestinationCookie('loja-a'), shippingDestinationCookie('loja-b'))
+  assert.equal(shippingDestinationCookie('loja-a'), shippingDestinationCookie('loja-a'))
+})

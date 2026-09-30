@@ -22,3 +22,18 @@ export function selectShippingOption(options: DeliveryOption[], provider: string
 export function checkoutTotal(total: number, shipping: number): number {
   return Math.round((total + shipping) * 100) / 100
 }
+
+export interface ShippingDestination {
+  zipcode: string
+  provider: string
+  serviceCode: string
+}
+
+export function shippingDestinationCookie(siteSlug: string): string {
+  return `elinea_shipping_${encodeURIComponent(siteSlug)}`
+}
+
+export function preferredShippingOption<T extends DeliveryOption>(options: T[], destination?: ShippingDestination | null): T | null {
+  const preferred = options.find(option => option.provider === destination?.provider && option.serviceCode === destination?.serviceCode)
+  return preferred || [...options].sort((a, b) => a.price - b.price)[0] || null
+}

@@ -1,11 +1,11 @@
 <script setup lang="ts">
 import { vMask } from '~/utils/input-mask'
-import { Check, ChevronLeft, MapPin, PackageCheck, Truck } from '@lucide/vue'
+import { Check, ChevronLeft, MapPin, PackageCheck } from '@lucide/vue'
 import type { Customer, CustomerAddress, ShippingOption, ShippingProvider, Order } from '@elinea/sdk'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
 import { useStorefrontCommerce } from '~~/layers/storefront-core/app/composables/useStorefrontCommerce'
-import { checkoutTotal, shippingContext } from '#shared/utils/checkout-shipping'
+import { checkoutTotal, shippingContext, preferredShippingOption } from '#shared/utils/checkout-shipping'
 import SharedCommerceHeader from './SharedCommerceHeader.vue'
 
 const props = defineProps<{ storefront: StorefrontPayload }>()
@@ -14,8 +14,9 @@ const { cart, cartProducts, initialize, clearCartSession } = useStorefrontCommer
 const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
 const { data: session } = await useFetch<{ customer: Customer }>('/api/auth/me', { headers: requestHeaders, ignoreResponseError: true })
 const customer = computed(() => session.value?.customer)
+const shippingDestination = useShippingDestination(props.storefront.site.slug)
 const contact = reactive({ email: '', firstName: '', lastName: '', document: '', phone: '' })
-const address = reactive({ zipcode: '', street: '', number: '', complement: '', district: '', city: '', state: '' })
+const address = reactive({ zipcode: shippingDestination.value?.zipcode || '', street: '', number: '', complement: '', district: '', city: '', state: '' })
 const states = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
 const { data: savedAddresses } = await useFetch<{ data: CustomerAddress[] }>('/api/addresses', {
   headers: requestHeaders,
@@ -30,7 +31,7 @@ watch(customer, (value) => {
 watch(savedAddresses, (value) => {
   const preferred = value?.data.find(item => item.isDefault) || value?.data[0]
   if (!preferred) return
-  Object.assign(address, { zipcode: preferred.zipcode, street: preferred.street, number: preferred.number || '', complement: preferred.complement || '', district: preferred.district || '', city: preferred.city, state: preferred.state })
+  Object.assign(address, { zipcode: shippingDestination.value?.zipcode || preferred.zipcode, street: preferred.street, number: preferred.number || '', complement: preferred.complement || '', district: preferred.district || '', city: preferred.city, state: preferred.state })
 }, { immediate: true })
 const currentStep = ref<1 | 2 | 3>(1)
 const shippingOptions = ref<ShippingOption[]>([])
@@ -44,10 +45,14 @@ const errors = reactive<Record<string, string>>({})
 const createdOrder = ref<Order | null>(null)
 const { data: providersResponse, error: providersError } = await useFetch<{ data: ShippingProvider[] }>('/api/shipping/providers', { headers: requestHeaders })
 const providers = computed(() => providersResponse.value?.data || [])
-watch(providers, value => { provider.value = value[0]?.provider || '' }, { immediate: true })
+watch(providers, value => { provider.value = value.find(item => item.provider === shippingDestination.value?.provider)?.provider || value[0]?.provider || '' }, { immediate: true })
 const deliveryContext = computed(() => shippingContext(address.zipcode, cart.value.items))
 const total = computed(() => checkoutTotal(cart.value.totals.total, selectedDelivery.value?.price || 0))
+const summaryZipcodeEditing = ref(!address.zipcode)
+const summaryZipcodeInput = ref<HTMLInputElement | null>(null)
 let quoteVersion = 0
+let shippingTimer: ReturnType<typeof setTimeout> | undefined
+let mounted = false
 watch([deliveryContext, provider], () => {
   quoteVersion++
   shippingLoading.value = false
@@ -55,6 +60,10 @@ watch([deliveryContext, provider], () => {
   selectedDelivery.value = null
   shippingError.value = ''
   if (currentStep.value === 3 && !createdOrder.value) currentStep.value = 2
+  if (shippingTimer) clearTimeout(shippingTimer)
+  if (mounted && !createdOrder.value && /^\d{8}$/.test(address.zipcode.replace(/\D/g, '')) && provider.value && cart.value.items.length) {
+    shippingTimer = setTimeout(() => { void calculateShipping() }, 400)
+  }
 }, { flush: 'sync' })
 for (const key of Object.keys(contact) as Array<keyof typeof contact>) {
   watch(() => contact[key], () => { delete errors[`contact.${key}`] })
@@ -62,13 +71,31 @@ for (const key of Object.keys(contact) as Array<keyof typeof contact>) {
 for (const key of Object.keys(address) as Array<keyof typeof address>) {
   watch(() => address[key], () => { delete errors[`address.${key}`] })
 }
-onMounted(initialize)
+onMounted(async () => {
+  await initialize()
+  mounted = true
+  if (/^\d{8}$/.test(address.zipcode.replace(/\D/g, '')) && provider.value && cart.value.items.length) await calculateShipping()
+})
+onBeforeUnmount(() => { quoteVersion++; if (shippingTimer) clearTimeout(shippingTimer) })
+
+function chooseDelivery(option: ShippingOption) {
+  selectedDelivery.value = option
+  shippingError.value = ''
+  shippingDestination.value = { zipcode: address.zipcode.replace(/\D/g, ''), provider: option.provider, serviceCode: option.serviceCode }
+}
+
+async function editShippingZipcode() {
+  summaryZipcodeEditing.value = true
+  await nextTick()
+  summaryZipcodeInput.value?.focus()
+}
 
 function errorMessage(error: any): string {
   return error?.data?.message || error?.data?.statusMessage || 'Não foi possível concluir a operação. Tente novamente.'
 }
 
 async function calculateShipping() {
+  if (shippingTimer) clearTimeout(shippingTimer)
   shippingError.value = ''
   selectedDelivery.value = null
   shippingOptions.value = []
@@ -88,6 +115,11 @@ async function calculateShipping() {
     })
     if (version !== quoteVersion) return
     shippingOptions.value = response.data
+    const preferred = preferredShippingOption(response.data, shippingDestination.value)
+    if (preferred) {
+      chooseDelivery(preferred)
+      summaryZipcodeEditing.value = false
+    }
     if (!response.data.length) shippingError.value = 'Nenhuma entrega disponível para este CEP.'
   } catch (error) {
     if (version === quoteVersion) shippingError.value = errorMessage(error)
@@ -166,19 +198,7 @@ function goBack() {
           <section v-else-if="currentStep===2" class="form-section">
             <div class="section-title"><span>02</span><div><h2>Entrega</h2><p>Etapa 2: informe onde você quer receber.</p></div></div>
             <div class="field-grid"><label>CEP <span class="required" aria-hidden="true">*</span><input v-mask="'zipcode'" v-model="address.zipcode" autocomplete="postal-code" inputmode="numeric" placeholder="00000-000" :aria-invalid="Boolean(errors['address.zipcode'])" :class="{invalid:errors['address.zipcode']}"><span v-if="errors['address.zipcode']" class="field-error">{{ errors['address.zipcode'] }}</span></label><label class="wide">Rua / avenida <span class="required" aria-hidden="true">*</span><input v-model="address.street" autocomplete="address-line1" placeholder="Nome da rua" :aria-invalid="Boolean(errors['address.street'])" :class="{invalid:errors['address.street']}"><span v-if="errors['address.street']" class="field-error">{{ errors['address.street'] }}</span></label><label>Número <span class="required" aria-hidden="true">*</span><input v-model="address.number" autocomplete="address-line2" placeholder="Número" :aria-invalid="Boolean(errors['address.number'])" :class="{invalid:errors['address.number']}"><span v-if="errors['address.number']" class="field-error">{{ errors['address.number'] }}</span></label><label>Complemento<input v-model="address.complement" placeholder="Apto, bloco (opcional)"></label><label>Bairro <span class="required" aria-hidden="true">*</span><input v-model="address.district" placeholder="Seu bairro" :aria-invalid="Boolean(errors['address.district'])" :class="{invalid:errors['address.district']}"><span v-if="errors['address.district']" class="field-error">{{ errors['address.district'] }}</span></label><label>Cidade <span class="required" aria-hidden="true">*</span><input v-model="address.city" autocomplete="address-level2" placeholder="Sua cidade" :aria-invalid="Boolean(errors['address.city'])" :class="{invalid:errors['address.city']}"><span v-if="errors['address.city']" class="field-error">{{ errors['address.city'] }}</span></label><label>Estado <span class="required" aria-hidden="true">*</span><select v-model="address.state" autocomplete="address-level1" :aria-invalid="Boolean(errors['address.state'])" :class="{invalid:errors['address.state']}"><option value="" disabled>Selecione</option><option v-for="state in states" :key="state" :value="state">{{ state }}</option></select><span v-if="errors['address.state']" class="field-error">{{ errors['address.state'] }}</span></label></div>
-            <div class="shipping-calculator">
-              <label v-if="providers.length > 1">Transportadora<select v-model="provider"><option v-for="item in providers" :key="item.provider" :value="item.provider">{{ item.name }}</option></select></label>
-              <button type="button" class="calculate-shipping" :disabled="shippingLoading || !provider || !cart.items.length" @click="calculateShipping">{{ shippingLoading ? 'Calculando...' : 'Calcular frete' }}</button>
-            </div>
-            <p v-if="providersError" class="field-error" role="alert">Não foi possível carregar as transportadoras. Recarregue a página para tentar novamente.</p>
-            <p v-else-if="!providers.length" class="integration-note">Esta loja ainda não possui uma transportadora disponível para calcular a entrega.</p>
-            <p v-if="shippingLoading" class="integration-note" role="status">Consultando preço e prazo de entrega...</p>
-            <p v-if="shippingError" class="field-error" role="alert">{{ shippingError }}</p>
-            <div class="delivery-options" aria-live="polite" aria-label="Opções de entrega" :aria-busy="shippingLoading">
-              <button v-for="option in shippingOptions" :key="`${option.provider}:${option.serviceCode}`" type="button" :class="{selected:selectedDelivery?.serviceCode===option.serviceCode && selectedDelivery?.provider===option.provider}" :aria-pressed="selectedDelivery?.serviceCode===option.serviceCode && selectedDelivery?.provider===option.provider" @click="selectedDelivery=option; shippingError=''">
-                <Truck :size="20"/><span><strong>{{ option.serviceName }}</strong><small>{{ option.deadlineText }}</small></span><em>{{ option.price === 0 ? 'Grátis' : money(option.price) }}</em>
-              </button>
-            </div>
+            <p class="integration-note">O frete e as opções de entrega estão no resumo do pedido.</p>
           </section>
 
           <section v-else class="form-section">
@@ -196,7 +216,30 @@ function goBack() {
         <span class="summary-label">Resumo</span><h2>Seu pedido</h2>
         <div v-for="entry in cartProducts" :key="entry.item.id" class="summary-product"><div class="summary-image"><img v-if="entry.product&&productImage(entry.product)" :src="productImage(entry.product)!" :alt="entry.item.name"><span v-else>{{ entry.item.name.charAt(0) }}</span></div><div><strong>{{ entry.item.name }}</strong><small>{{ entry.item.quantity }} {{ entry.item.quantity===1?'unidade':'unidades' }}</small></div><b>{{ money(entry.item.total) }}</b></div>
         <p v-if="!cartProducts.length" class="empty-summary">Seu carrinho está vazio. Adicione produtos antes de finalizar.</p>
-        <dl><div><dt>Subtotal</dt><dd>{{ money(cart.totals.items_total) }}</dd></div><div v-if="cart.totals.discount"><dt>Desconto</dt><dd>− {{ money(cart.totals.discount) }}</dd></div><div><dt>Entrega</dt><dd>{{ selectedDelivery ? (selectedDelivery.price === 0 ? 'Grátis' : money(selectedDelivery.price)) : 'A calcular' }}</dd></div><div class="total"><dt>Total</dt><dd>{{ money(total) }}</dd></div></dl>
+        <dl>
+          <div><dt>Subtotal</dt><dd>{{ money(cart.totals.items_total) }}</dd></div>
+          <div v-if="cart.totals.discount"><dt>Desconto</dt><dd>− {{ money(cart.totals.discount) }}</dd></div>
+          <div><dt>Frete</dt><dd><span v-if="shippingLoading">Calculando...</span><span v-else-if="selectedDelivery">{{ selectedDelivery.price === 0 ? 'Grátis' : money(selectedDelivery.price) }}</span><button v-else class="shipping-link" type="button" @click="editShippingZipcode">A calcular</button></dd></div>
+        </dl>
+        <section class="summary-shipping" aria-label="Cálculo de frete" :aria-busy="shippingLoading">
+          <div v-if="selectedDelivery && !summaryZipcodeEditing" class="shipping-destination"><span>Entrega para {{ address.zipcode }}<small>{{ selectedDelivery.serviceName }} · {{ selectedDelivery.deadlineText }}</small></span><button type="button" class="shipping-link" :disabled="saving" @click="editShippingZipcode">Alterar CEP</button></div>
+          <form v-if="summaryZipcodeEditing || !selectedDelivery" class="summary-shipping-form" @submit.prevent="calculateShipping">
+            <label for="checkout-shipping-zipcode">CEP de entrega</label>
+            <div class="summary-shipping-controls"><input id="checkout-shipping-zipcode" ref="summaryZipcodeInput" v-mask="'zipcode'" v-model="address.zipcode" inputmode="numeric" autocomplete="postal-code" placeholder="00000-000" :disabled="saving" :aria-invalid="Boolean(errors['address.zipcode'])" aria-describedby="checkout-shipping-feedback"><button type="submit" :disabled="shippingLoading || saving || !provider || !cart.items.length">{{ shippingLoading ? 'Calculando...' : 'Calcular' }}</button></div>
+            <label v-if="providers.length > 1" class="summary-provider">Transportadora<select v-model="provider" :disabled="saving"><option v-for="item in providers" :key="item.provider" :value="item.provider">{{ item.name }}</option></select></label>
+          </form>
+          <div id="checkout-shipping-feedback" aria-live="polite">
+            <p v-if="errors['address.zipcode']" class="field-error">{{ errors['address.zipcode'] }}</p>
+            <p v-if="providersError" class="field-error" role="alert">Não foi possível carregar as transportadoras. Recarregue a página para tentar novamente.</p>
+            <p v-else-if="!providers.length" class="integration-note">Esta loja ainda não possui uma transportadora disponível.</p>
+            <p v-if="shippingError" class="field-error" role="alert">{{ shippingError }}</p>
+            <p v-if="shippingLoading" class="integration-note" role="status">Consultando preço e prazo para seu carrinho...</p>
+          </div>
+          <div v-if="shippingOptions.length" class="summary-deliveries" role="group" aria-label="Opções de entrega">
+            <button v-for="option in shippingOptions" :key="`${option.provider}:${option.serviceCode}`" type="button" :disabled="saving" :class="{selected:selectedDelivery?.serviceCode===option.serviceCode && selectedDelivery?.provider===option.provider}" :aria-pressed="selectedDelivery?.serviceCode===option.serviceCode && selectedDelivery?.provider===option.provider" @click="chooseDelivery(option)"><span><strong>{{ option.serviceName }}</strong><small>{{ option.deadlineText }}</small></span><b>{{ option.price === 0 ? 'Grátis' : money(option.price) }}</b></button>
+          </div>
+        </section>
+        <dl class="summary-total"><div class="total"><dt>Total</dt><dd>{{ money(total) }}</dd></div></dl>
         <div class="summary-safe"><MapPin :size="18"/><p><strong>Entrega protegida</strong><span>Você acompanha cada etapa do pedido.</span></p></div>
       </aside>
     </main>
@@ -210,4 +253,5 @@ function goBack() {
 .checkout-actions{display:flex;align-items:center;gap:12px;margin-top:18px}.checkout-actions .continue{margin-top:0;flex:1}.back-step{display:inline-flex;height:58px;align-items:center;gap:5px;padding:0 18px;border:1px solid #d1d5db;border-radius:9px;background:#fff;color:#374151;font:650 13px var(--sf-body);cursor:pointer}.back-step:hover{border-color:#2563eb;color:#2563eb}.steps i.active{border-color:#2563eb;background:#eff6ff;color:#2563eb}.steps i.done{display:grid;place-items:center}
 .customer-note{margin:0 0 18px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;padding:12px 14px;color:#1e40af;font-size:13px;line-height:1.45}
 .required{display:inline;color:#b91c1c}.field-grid label{display:block}.field-grid label>input,.field-grid label>select{display:block;margin-top:8px}.field-grid label>.field-error{display:block;margin-top:6px}.shipping-calculator{display:flex;align-items:end;gap:14px;margin-top:18px;flex-wrap:wrap}.shipping-calculator label{display:grid;gap:8px;font-size:12px;font-weight:700}.shipping-calculator select{min-height:48px;border:1px solid #d1d5db;border-radius:10px;padding:0 12px;background:#fff}.calculate-shipping{min-height:48px;padding:0 20px;border:1px solid #2563eb;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:700;cursor:pointer}.calculate-shipping:disabled{opacity:.6;cursor:not-allowed}.field-error{color:#b91c1c;font-size:12px;line-height:1.5}.field-grid input.invalid,.field-grid select.invalid{border-color:#b91c1c}.order-review{font-size:14px;line-height:1.7;color:#374151}.delivery-options button:focus-visible,.calculate-shipping:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
+.shipping-link{padding:0;border:0;background:transparent;color:var(--sf-primary,#2563eb);font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.shipping-link:focus-visible{outline:2px solid var(--sf-primary,#2563eb);outline-offset:4px}.summary-shipping{padding-top:16px;border-top:1px solid #e5e7eb}.summary-shipping-form>label{display:block;margin-bottom:8px;color:#374151;font-size:12px;font-weight:700}.summary-shipping-controls{display:flex;gap:8px}.summary-shipping-controls input{min-width:0;width:100%;height:44px;padding:0 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;font-size:16px}.summary-shipping-controls button{min-height:44px;padding:0 14px;border:0;border-radius:8px;background:var(--sf-primary,#2563eb);color:#fff;font-size:12px;font-weight:700;cursor:pointer}.summary-shipping-controls button:disabled,.summary-deliveries button:disabled{opacity:.6;cursor:not-allowed}.summary-shipping-controls input:focus-visible,.summary-shipping-controls button:focus-visible,.summary-deliveries button:focus-visible{outline:2px solid var(--sf-primary,#2563eb);outline-offset:3px}.summary-shipping-controls input[aria-invalid="true"]{border-color:#b91c1c}.summary-provider{margin-top:12px}.summary-provider select{display:block;width:100%;min-height:44px;margin-top:8px}.shipping-destination{display:flex;align-items:start;justify-content:space-between;gap:12px;font-size:12px;color:#374151}.shipping-destination small{display:block;margin-top:5px;color:#6b7280;line-height:1.5}.shipping-destination button{flex-shrink:0}.summary-deliveries{display:grid;margin-top:12px;gap:8px}.summary-deliveries button{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:56px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:9px;background:#fff;color:#111827;text-align:left;cursor:pointer}.summary-deliveries button.selected{border-color:var(--sf-primary,#2563eb);background:#eff6ff}.summary-deliveries span{display:grid;gap:4px}.summary-deliveries strong,.summary-deliveries b{font-size:12px}.summary-deliveries small{font-size:11px;color:#6b7280}.summary dl.summary-total{margin-top:18px}.summary-total .total{font-variant-numeric:tabular-nums}
 </style>
