@@ -1,15 +1,16 @@
 <script setup lang="ts">
 import { vMask } from '~/utils/input-mask'
-import { Check, ChevronLeft, CreditCard, MapPin, PackageCheck, Truck } from '@lucide/vue'
-import type { Customer, CustomerAddress } from '@elinea/sdk'
+import { Check, ChevronLeft, MapPin, PackageCheck, Truck } from '@lucide/vue'
+import type { Customer, CustomerAddress, ShippingOption, ShippingProvider, Order } from '@elinea/sdk'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
 import { useStorefrontCommerce } from '~~/layers/storefront-core/app/composables/useStorefrontCommerce'
+import { checkoutTotal, shippingContext } from '#shared/utils/checkout-shipping'
 import SharedCommerceHeader from './SharedCommerceHeader.vue'
 
 const props = defineProps<{ storefront: StorefrontPayload }>()
 const { money, productImage } = useStorefrontCatalog(props.storefront)
-const { cart, cartProducts, initialize } = useStorefrontCommerce(props.storefront)
+const { cart, cartProducts, initialize, clearCartSession } = useStorefrontCommerce(props.storefront)
 const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
 const { data: session } = await useFetch<{ customer: Customer }>('/api/auth/me', { headers: requestHeaders, ignoreResponseError: true })
 const customer = computed(() => session.value?.customer)
@@ -31,17 +32,115 @@ watch(savedAddresses, (value) => {
   if (!preferred) return
   Object.assign(address, { zipcode: preferred.zipcode, street: preferred.street, number: preferred.number || '', complement: preferred.complement || '', district: preferred.district || '', city: preferred.city, state: preferred.state })
 }, { immediate: true })
-const delivery = ref<'standard' | 'express'>('standard')
 const currentStep = ref<1 | 2 | 3>(1)
-const paymentStarted = ref(false)
-const orderReviewed = ref(false)
+const shippingOptions = ref<ShippingOption[]>([])
+const selectedDelivery = ref<ShippingOption | null>(null)
+const provider = ref('')
+const shippingLoading = ref(false)
+const saving = ref(false)
+const shippingError = ref('')
+const submitError = ref('')
+const errors = reactive<Record<string, string>>({})
+const createdOrder = ref<Order | null>(null)
+const { data: providersResponse, error: providersError } = await useFetch<{ data: ShippingProvider[] }>('/api/shipping/providers', { headers: requestHeaders })
+const providers = computed(() => providersResponse.value?.data || [])
+watch(providers, value => { provider.value = value[0]?.provider || '' }, { immediate: true })
+const deliveryContext = computed(() => shippingContext(address.zipcode, cart.value.items))
+const total = computed(() => checkoutTotal(cart.value.totals.total, selectedDelivery.value?.price || 0))
+let quoteVersion = 0
+watch([deliveryContext, provider], () => {
+  quoteVersion++
+  shippingLoading.value = false
+  shippingOptions.value = []
+  selectedDelivery.value = null
+  shippingError.value = ''
+  if (currentStep.value === 3 && !createdOrder.value) currentStep.value = 2
+}, { flush: 'sync' })
+for (const key of Object.keys(contact) as Array<keyof typeof contact>) {
+  watch(() => contact[key], () => { delete errors[`contact.${key}`] })
+}
+for (const key of Object.keys(address) as Array<keyof typeof address>) {
+  watch(() => address[key], () => { delete errors[`address.${key}`] })
+}
 onMounted(initialize)
 
-function continueToPayment() {
-  if (currentStep.value < 3) {
-    currentStep.value = (currentStep.value + 1) as 2 | 3
-    paymentStarted.value = currentStep.value === 3
-  } else orderReviewed.value = true
+function errorMessage(error: any): string {
+  return error?.data?.message || error?.data?.statusMessage || 'Não foi possível concluir a operação. Tente novamente.'
+}
+
+async function calculateShipping() {
+  shippingError.value = ''
+  selectedDelivery.value = null
+  shippingOptions.value = []
+  if (!/^\d{8}$/.test(address.zipcode.replace(/\D/g, ''))) {
+    errors['address.zipcode'] = 'Informe um CEP com 8 dígitos.'
+    return
+  }
+  if (!provider.value || !cart.value.items.length) {
+    shippingError.value = !provider.value ? 'Nenhuma transportadora disponível para esta loja.' : 'Adicione produtos ao carrinho antes de calcular.'
+    return
+  }
+  const version = ++quoteVersion
+  shippingLoading.value = true
+  try {
+    const response = await $fetch<{ data: ShippingOption[] }>('/api/shipping/quote', {
+      method: 'POST', body: { provider: provider.value, zipcode: address.zipcode },
+    })
+    if (version !== quoteVersion) return
+    shippingOptions.value = response.data
+    if (!response.data.length) shippingError.value = 'Nenhuma entrega disponível para este CEP.'
+  } catch (error) {
+    if (version === quoteVersion) shippingError.value = errorMessage(error)
+  } finally {
+    if (version === quoteVersion) shippingLoading.value = false
+  }
+}
+
+function validateContact(): boolean {
+  if (!contact.firstName.trim()) errors['contact.firstName'] = 'Informe seu nome.'
+  if (!contact.lastName.trim()) errors['contact.lastName'] = 'Informe seu sobrenome.'
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) errors['contact.email'] = 'Informe um e-mail válido.'
+  return !Object.keys(errors).some(key => key.startsWith('contact.'))
+}
+
+function validateDelivery(): boolean {
+  if (!/^\d{8}$/.test(address.zipcode.replace(/\D/g, ''))) errors['address.zipcode'] = 'Informe um CEP com 8 dígitos.'
+  for (const [key, label] of [['street', 'a rua'], ['number', 'o número'], ['district', 'o bairro'], ['city', 'a cidade']] as const) {
+    if (!address[key].trim()) errors[`address.${key}`] = `Informe ${label}.`
+  }
+  if (!states.includes(address.state)) errors['address.state'] = 'Selecione o estado.'
+  if (!selectedDelivery.value) shippingError.value = 'Calcule o frete e selecione uma opção de entrega.'
+  return !Object.keys(errors).some(key => key.startsWith('address.')) && Boolean(selectedDelivery.value)
+}
+
+async function continueCheckout() {
+  if (saving.value || createdOrder.value) return
+  submitError.value = ''
+  if (!cart.value.items.length) { submitError.value = 'Seu carrinho está vazio.'; return }
+  if (currentStep.value === 1) {
+    if (validateContact()) currentStep.value = 2
+    return
+  }
+  if (currentStep.value === 2) {
+    if (validateDelivery()) currentStep.value = 3
+    return
+  }
+  if (!validateContact()) { currentStep.value = 1; return }
+  if (!validateDelivery()) { currentStep.value = 2; return }
+  saving.value = true
+  try {
+    const delivery = selectedDelivery.value!
+    const response = await $fetch<{ data: Order }>('/api/checkout', { method: 'POST', body: {
+      customer: { name: `${contact.firstName.trim()} ${contact.lastName.trim()}`, email: contact.email.trim(), phone: contact.phone, document: contact.document },
+      shippingAddress: { ...address }, shippingProvider: delivery.provider, shippingServiceCode: delivery.serviceCode, shippingTotal: delivery.price,
+    } })
+    createdOrder.value = response.data
+    clearCartSession()
+  } catch (error) {
+    submitError.value = errorMessage(error)
+  } finally {
+    saving.value = false
+  }
 }
 
 function goBack() {
@@ -51,44 +150,53 @@ function goBack() {
 
 <template>
   <div class="checkout-shell">
-    <SharedCommerceHeader :store-name="storefront.site.name" :logo-url="storefront.theme?.logo_url" step="Entrega e pagamento" />
+    <SharedCommerceHeader :store-name="storefront.site.name" :logo-url="storefront.theme?.logo_url" step="Entrega e confirmação" />
     <main class="checkout-layout">
       <div class="checkout-main">
         <NuxtLink to="/carrinho" class="back"><ChevronLeft :size="17" /> Voltar ao carrinho</NuxtLink>
-        <div class="title-row"><div><span>Finalizar compra</span><h1>Quase tudo pronto.</h1></div><div class="steps" aria-label="Etapas: 1 contato, 2 entrega, 3 pagamento"><i :class="{done:currentStep>1}" title="Contato"><Check v-if="currentStep>1" :size="12" /><span v-else>1</span></i><b></b><i :class="{done:currentStep>2,active:currentStep===2}" title="Entrega"><Check v-if="currentStep>2" :size="12" /><span v-else>2</span></i><b></b><i :class="{active:currentStep===3}" title="Pagamento">3</i></div></div>
+        <div class="title-row"><div><span>Finalizar compra</span><h1>Quase tudo pronto.</h1></div><div class="steps" aria-label="Etapas: 1 contato, 2 entrega, 3 revisão"><i :class="{done:currentStep>1}" title="Contato"><Check v-if="currentStep>1" :size="12" /><span v-else>1</span></i><b></b><i :class="{done:currentStep>2,active:currentStep===2}" title="Entrega"><Check v-if="currentStep>2" :size="12" /><span v-else>2</span></i><b></b><i :class="{active:currentStep===3}" title="Revisão">3</i></div></div>
 
-        <form @submit.prevent>
+        <form v-if="!createdOrder" @submit.prevent="continueCheckout">
           <section v-if="currentStep===1" class="form-section">
             <div class="section-title"><span>01</span><div><h2>Contato</h2><p>Usaremos estes dados para avisar sobre o pedido.</p></div></div>
             <p v-if="customer" class="customer-note">Dados de {{ customer.name }} carregados da sua conta. Você pode ajustá-los para esta compra.</p>
-            <div class="field-grid"><label class="wide">E-mail<input v-model="contact.email" type="email" autocomplete="email" placeholder="voce@email.com"></label><label>Nome<input v-model="contact.firstName" autocomplete="given-name" placeholder="Seu nome"></label><label>Sobrenome<input v-model="contact.lastName" autocomplete="family-name" placeholder="Seu sobrenome"></label><label>CPF<input v-mask="'cpf'" v-model="contact.document" inputmode="numeric" placeholder="000.000.000-00"></label><label>Telefone<input inputmode="tel" v-mask="'phone'" v-model="contact.phone" type="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label></div>
+            <div class="field-grid"><label class="wide">E-mail <span class="required" aria-hidden="true">*</span><input v-model="contact.email" type="email" autocomplete="email" placeholder="voce@email.com" :aria-invalid="Boolean(errors['contact.email'])" :class="{invalid:errors['contact.email']}"><span v-if="errors['contact.email']" class="field-error">{{ errors['contact.email'] }}</span></label><label>Nome <span class="required" aria-hidden="true">*</span><input v-model="contact.firstName" autocomplete="given-name" placeholder="Seu nome" :aria-invalid="Boolean(errors['contact.firstName'])" :class="{invalid:errors['contact.firstName']}"><span v-if="errors['contact.firstName']" class="field-error">{{ errors['contact.firstName'] }}</span></label><label>Sobrenome <span class="required" aria-hidden="true">*</span><input v-model="contact.lastName" autocomplete="family-name" placeholder="Seu sobrenome" :aria-invalid="Boolean(errors['contact.lastName'])" :class="{invalid:errors['contact.lastName']}"><span v-if="errors['contact.lastName']" class="field-error">{{ errors['contact.lastName'] }}</span></label><label>CPF<input v-mask="'cpf'" v-model="contact.document" inputmode="numeric" placeholder="000.000.000-00"></label><label>Telefone<input inputmode="tel" v-mask="'phone'" v-model="contact.phone" type="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label></div>
           </section>
 
           <section v-else-if="currentStep===2" class="form-section">
             <div class="section-title"><span>02</span><div><h2>Entrega</h2><p>Etapa 2: informe onde você quer receber.</p></div></div>
-            <div class="field-grid"><label>CEP<input v-mask="'zipcode'" v-model="address.zipcode" autocomplete="postal-code" inputmode="numeric" placeholder="00000-000"></label><label class="wide">Rua / avenida<input v-model="address.street" autocomplete="address-line1" placeholder="Nome da rua"></label><label>Número<input v-model="address.number" autocomplete="address-line2" placeholder="Número"></label><label>Complemento<input v-model="address.complement" placeholder="Apto, bloco (opcional)"></label><label>Bairro<input v-model="address.district" placeholder="Seu bairro"></label><label>Cidade<input v-model="address.city" autocomplete="address-level2" placeholder="Sua cidade"></label><label>Estado<select v-model="address.state" autocomplete="address-level1"><option value="" disabled>Selecione</option><option v-for="state in states" :key="state" :value="state">{{ state }}</option></select></label></div>
-            <div class="delivery-options"><button type="button" :class="{selected:delivery==='standard'}" @click="delivery='standard'"><Truck :size="20"/><span><strong>Entrega padrão</strong><small>Prazo calculado pelo CEP</small></span><em>A calcular</em></button><button type="button" :class="{selected:delivery==='express'}" @click="delivery='express'"><PackageCheck :size="20"/><span><strong>Entrega expressa</strong><small>Quando disponível para a região</small></span><em>A calcular</em></button></div>
-          </section>
-
-          <section v-else class="form-section" :class="{ muted: !paymentStarted }">
-            <div class="section-title"><span>03</span><div><h2>Pagamento</h2><p>{{ paymentStarted ? 'Etapa 3: escolha uma forma de pagamento para continuar o teste.' : 'Etapa 3: disponível depois de confirmar o endereço.' }}</p></div></div>
-            <div class="payment-preview"><CreditCard :size="21"/><span>Cartão, Pix e outras formas de pagamento</span></div>
-            <div v-if="paymentStarted" class="payment-fields">
-              <label>Número do cartão<input v-mask="'card'" inputmode="numeric" autocomplete="cc-number" placeholder="0000 0000 0000 0000"></label>
-              <div><label>Validade<input v-mask="'expiry'" inputmode="numeric" autocomplete="cc-exp" placeholder="MM/AA"></label><label>CVV<input v-mask="'cvv'" inputmode="numeric" autocomplete="cc-csc" placeholder="000"></label></div>
+            <div class="field-grid"><label>CEP <span class="required" aria-hidden="true">*</span><input v-mask="'zipcode'" v-model="address.zipcode" autocomplete="postal-code" inputmode="numeric" placeholder="00000-000" :aria-invalid="Boolean(errors['address.zipcode'])" :class="{invalid:errors['address.zipcode']}"><span v-if="errors['address.zipcode']" class="field-error">{{ errors['address.zipcode'] }}</span></label><label class="wide">Rua / avenida <span class="required" aria-hidden="true">*</span><input v-model="address.street" autocomplete="address-line1" placeholder="Nome da rua" :aria-invalid="Boolean(errors['address.street'])" :class="{invalid:errors['address.street']}"><span v-if="errors['address.street']" class="field-error">{{ errors['address.street'] }}</span></label><label>Número <span class="required" aria-hidden="true">*</span><input v-model="address.number" autocomplete="address-line2" placeholder="Número" :aria-invalid="Boolean(errors['address.number'])" :class="{invalid:errors['address.number']}"><span v-if="errors['address.number']" class="field-error">{{ errors['address.number'] }}</span></label><label>Complemento<input v-model="address.complement" placeholder="Apto, bloco (opcional)"></label><label>Bairro <span class="required" aria-hidden="true">*</span><input v-model="address.district" placeholder="Seu bairro" :aria-invalid="Boolean(errors['address.district'])" :class="{invalid:errors['address.district']}"><span v-if="errors['address.district']" class="field-error">{{ errors['address.district'] }}</span></label><label>Cidade <span class="required" aria-hidden="true">*</span><input v-model="address.city" autocomplete="address-level2" placeholder="Sua cidade" :aria-invalid="Boolean(errors['address.city'])" :class="{invalid:errors['address.city']}"><span v-if="errors['address.city']" class="field-error">{{ errors['address.city'] }}</span></label><label>Estado <span class="required" aria-hidden="true">*</span><select v-model="address.state" autocomplete="address-level1" :aria-invalid="Boolean(errors['address.state'])" :class="{invalid:errors['address.state']}"><option value="" disabled>Selecione</option><option v-for="state in states" :key="state" :value="state">{{ state }}</option></select><span v-if="errors['address.state']" class="field-error">{{ errors['address.state'] }}</span></label></div>
+            <div class="shipping-calculator">
+              <label v-if="providers.length > 1">Transportadora<select v-model="provider"><option v-for="item in providers" :key="item.provider" :value="item.provider">{{ item.name }}</option></select></label>
+              <button type="button" class="calculate-shipping" :disabled="shippingLoading || !provider || !cart.items.length" @click="calculateShipping">{{ shippingLoading ? 'Calculando...' : 'Calcular frete' }}</button>
+            </div>
+            <p v-if="providersError" class="field-error" role="alert">Não foi possível carregar as transportadoras. Recarregue a página para tentar novamente.</p>
+            <p v-else-if="!providers.length" class="integration-note">Esta loja ainda não possui uma transportadora disponível para calcular a entrega.</p>
+            <p v-if="shippingLoading" class="integration-note" role="status">Consultando preço e prazo de entrega...</p>
+            <p v-if="shippingError" class="field-error" role="alert">{{ shippingError }}</p>
+            <div class="delivery-options" aria-live="polite" aria-label="Opções de entrega" :aria-busy="shippingLoading">
+              <button v-for="option in shippingOptions" :key="`${option.provider}:${option.serviceCode}`" type="button" :class="{selected:selectedDelivery?.serviceCode===option.serviceCode && selectedDelivery?.provider===option.provider}" :aria-pressed="selectedDelivery?.serviceCode===option.serviceCode && selectedDelivery?.provider===option.provider" @click="selectedDelivery=option; shippingError=''">
+                <Truck :size="20"/><span><strong>{{ option.serviceName }}</strong><small>{{ option.deadlineText }}</small></span><em>{{ option.price === 0 ? 'Grátis' : money(option.price) }}</em>
+              </button>
             </div>
           </section>
-          <div class="checkout-actions"><button v-if="currentStep>1" type="button" class="back-step" @click="goBack"><ChevronLeft :size="16"/> Voltar</button><button type="button" class="continue" @click="continueToPayment">{{ orderReviewed ? 'Pedido pronto para enviar' : currentStep===1 ? 'Continuar para entrega' : currentStep===2 ? 'Continuar para pagamento' : 'Continuar e revisar pedido' }}</button></div>
-          <p v-if="orderReviewed" class="test-success">Fluxo de teste concluído. Nenhuma cobrança foi realizada.</p>
-          <p v-else class="integration-note">Modo de teste: os campos podem ser enviados sem validação.</p>
+
+          <section v-else class="form-section">
+            <div class="section-title"><span>03</span><div><h2>Revise seu pedido</h2><p>Confira seus dados e a entrega antes de confirmar.</p></div></div>
+            <div class="order-review"><p><strong>{{ contact.firstName }} {{ contact.lastName }}</strong><br>{{ contact.email }}</p><p>{{ address.street }}, {{ address.number }}<br>{{ address.complement }} {{ address.district }}<br>{{ address.city }} / {{ address.state }} — {{ address.zipcode }}</p><p><strong>{{ selectedDelivery?.serviceName }}</strong><br>{{ selectedDelivery?.deadlineText }} — {{ money(selectedDelivery?.price || 0) }}</p></div>
+          </section>
+          <p v-if="submitError" class="field-error" role="alert">{{ submitError }}</p>
+          <div class="checkout-actions"><button v-if="currentStep>1" type="button" class="back-step" :disabled="saving" @click="goBack"><ChevronLeft :size="16"/> Voltar</button><button type="submit" class="continue" :disabled="saving || shippingLoading || !cart.items.length">{{ saving ? 'Confirmando...' : currentStep===1 ? 'Continuar para entrega' : currentStep===2 ? 'Revisar pedido' : 'Confirmar pedido' }}</button></div>
+          <p class="integration-note">Ao confirmar, seu pedido será enviado à loja. Nenhuma cobrança é realizada nesta etapa.</p>
         </form>
+        <section v-else class="form-section" role="status"><div class="section-title"><PackageCheck :size="30"/><div><h2>Pedido {{ createdOrder.number }} recebido</h2><p>Seu pedido foi enviado à loja com a entrega selecionada.</p></div></div><p>Total: <strong>{{ money(createdOrder.total) }}</strong></p><NuxtLink to="/" class="back">Continuar comprando</NuxtLink></section>
       </div>
 
-      <aside class="summary">
+      <aside v-if="!createdOrder" class="summary">
         <span class="summary-label">Resumo</span><h2>Seu pedido</h2>
         <div v-for="entry in cartProducts" :key="entry.item.id" class="summary-product"><div class="summary-image"><img v-if="entry.product&&productImage(entry.product)" :src="productImage(entry.product)!" :alt="entry.item.name"><span v-else>{{ entry.item.name.charAt(0) }}</span></div><div><strong>{{ entry.item.name }}</strong><small>{{ entry.item.quantity }} {{ entry.item.quantity===1?'unidade':'unidades' }}</small></div><b>{{ money(entry.item.total) }}</b></div>
         <p v-if="!cartProducts.length" class="empty-summary">Seu carrinho está vazio. Adicione produtos antes de finalizar.</p>
-        <dl><div><dt>Subtotal</dt><dd>{{ money(cart.totals.items_total) }}</dd></div><div><dt>Entrega</dt><dd>A calcular</dd></div><div class="total"><dt>Total</dt><dd>{{ money(cart.totals.total) }}</dd></div></dl>
+        <dl><div><dt>Subtotal</dt><dd>{{ money(cart.totals.items_total) }}</dd></div><div v-if="cart.totals.discount"><dt>Desconto</dt><dd>− {{ money(cart.totals.discount) }}</dd></div><div><dt>Entrega</dt><dd>{{ selectedDelivery ? (selectedDelivery.price === 0 ? 'Grátis' : money(selectedDelivery.price)) : 'A calcular' }}</dd></div><div class="total"><dt>Total</dt><dd>{{ money(total) }}</dd></div></dl>
         <div class="summary-safe"><MapPin :size="18"/><p><strong>Entrega protegida</strong><span>Você acompanha cada etapa do pedido.</span></p></div>
       </aside>
     </main>
@@ -101,4 +209,5 @@ function goBack() {
 .test-success{margin:12px 0 0;text-align:center;color:#15803d;font-size:12px;font-weight:700}
 .checkout-actions{display:flex;align-items:center;gap:12px;margin-top:18px}.checkout-actions .continue{margin-top:0;flex:1}.back-step{display:inline-flex;height:58px;align-items:center;gap:5px;padding:0 18px;border:1px solid #d1d5db;border-radius:9px;background:#fff;color:#374151;font:650 13px var(--sf-body);cursor:pointer}.back-step:hover{border-color:#2563eb;color:#2563eb}.steps i.active{border-color:#2563eb;background:#eff6ff;color:#2563eb}.steps i.done{display:grid;place-items:center}
 .customer-note{margin:0 0 18px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;padding:12px 14px;color:#1e40af;font-size:13px;line-height:1.45}
+.required{display:inline;color:#b91c1c}.field-grid label{display:block}.field-grid label>input,.field-grid label>select{display:block;margin-top:8px}.field-grid label>.field-error{display:block;margin-top:6px}.shipping-calculator{display:flex;align-items:end;gap:14px;margin-top:18px;flex-wrap:wrap}.shipping-calculator label{display:grid;gap:8px;font-size:12px;font-weight:700}.shipping-calculator select{min-height:48px;border:1px solid #d1d5db;border-radius:10px;padding:0 12px;background:#fff}.calculate-shipping{min-height:48px;padding:0 20px;border:1px solid #2563eb;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:700;cursor:pointer}.calculate-shipping:disabled{opacity:.6;cursor:not-allowed}.field-error{color:#b91c1c;font-size:12px;line-height:1.5}.field-grid input.invalid,.field-grid select.invalid{border-color:#b91c1c}.order-review{font-size:14px;line-height:1.7;color:#374151}.delivery-options button:focus-visible,.calculate-shipping:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
 </style>
