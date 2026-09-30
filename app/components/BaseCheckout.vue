@@ -1,11 +1,12 @@
 <script setup lang="ts">
 import { vMask } from '~/utils/input-mask'
-import { Check, ChevronLeft, MapPin, PackageCheck } from '@lucide/vue'
-import type { Customer, CustomerAddress, ShippingOption, ShippingProvider, Order } from '@elinea/sdk'
+import { Check, ChevronLeft, MapPin, PackageCheck, CreditCard } from '@lucide/vue'
+import type { Customer, CustomerAddress, ShippingOption, ShippingProvider, Order, PaymentMethod } from '@elinea/sdk'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
 import { useStorefrontCommerce } from '~~/layers/storefront-core/app/composables/useStorefrontCommerce'
 import { checkoutTotal, shippingContext, preferredShippingOption } from '#shared/utils/checkout-shipping'
+import { paymentMethodsLabel, isValidCpf } from '#shared/utils/checkout-payment'
 import SharedCommerceHeader from './SharedCommerceHeader.vue'
 
 const props = defineProps<{ storefront: StorefrontPayload }>()
@@ -15,8 +16,8 @@ const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : unde
 const { data: session } = await useFetch<{ customer: Customer }>('/api/auth/me', { headers: requestHeaders, ignoreResponseError: true })
 const customer = computed(() => session.value?.customer)
 const shippingDestination = useShippingDestination(props.storefront.site.slug)
-const contact = reactive({ email: '', firstName: '', lastName: '', document: '', phone: '' })
-const address = reactive({ zipcode: shippingDestination.value?.zipcode || '', street: '', number: '', complement: '', district: '', city: '', state: '' })
+const contact = useState(`checkout-contact:${props.storefront.site.slug}`, () => ({ email: '', firstName: '', lastName: '', document: '', phone: '' })).value
+const address = useState(`checkout-address:${props.storefront.site.slug}`, () => ({ zipcode: shippingDestination.value?.zipcode || '', street: '', number: '', complement: '', district: '', city: '', state: '' })).value
 const states = ['AC', 'AL', 'AP', 'AM', 'BA', 'CE', 'DF', 'ES', 'GO', 'MA', 'MT', 'MS', 'MG', 'PA', 'PB', 'PR', 'PE', 'PI', 'RJ', 'RN', 'RS', 'RO', 'RR', 'SC', 'SP', 'SE', 'TO']
 const { data: savedAddresses } = await useFetch<{ data: CustomerAddress[] }>('/api/addresses', {
   headers: requestHeaders,
@@ -30,7 +31,7 @@ watch(customer, (value) => {
 }, { immediate: true })
 watch(savedAddresses, (value) => {
   const preferred = value?.data.find(item => item.isDefault) || value?.data[0]
-  if (!preferred) return
+  if (!preferred || address.street) return
   Object.assign(address, { zipcode: shippingDestination.value?.zipcode || preferred.zipcode, street: preferred.street, number: preferred.number || '', complement: preferred.complement || '', district: preferred.district || '', city: preferred.city, state: preferred.state })
 }, { immediate: true })
 const currentStep = ref<1 | 2 | 3>(1)
@@ -43,6 +44,12 @@ const shippingError = ref('')
 const submitError = ref('')
 const errors = reactive<Record<string, string>>({})
 const createdOrder = ref<Order | null>(null)
+const { data: paymentMethodsResponse, error: paymentMethodsError } = await useFetch<{ data: PaymentMethod[] }>('/api/payment/methods', { headers: requestHeaders })
+const paymentMethods = computed(() => paymentMethodsResponse.value?.data || [])
+const selectedPaymentMethod = useState<number | null>(`checkout-payment-method:${props.storefront.site.slug}`, () => null)
+watch(paymentMethods, methods => {
+  if (!methods.some(method => method.id === selectedPaymentMethod.value)) selectedPaymentMethod.value = methods[0]?.id || null
+}, { immediate: true })
 const { data: providersResponse, error: providersError } = await useFetch<{ data: ShippingProvider[] }>('/api/shipping/providers', { headers: requestHeaders })
 const providers = computed(() => providersResponse.value?.data || [])
 watch(providers, value => { provider.value = value.find(item => item.provider === shippingDestination.value?.provider)?.provider || value[0]?.provider || '' }, { immediate: true })
@@ -132,6 +139,8 @@ function validateContact(): boolean {
   if (!contact.firstName.trim()) errors['contact.firstName'] = 'Informe seu nome.'
   if (!contact.lastName.trim()) errors['contact.lastName'] = 'Informe seu sobrenome.'
   if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(contact.email.trim())) errors['contact.email'] = 'Informe um e-mail válido.'
+  if (paymentMethods.value.length && !isValidCpf(contact.document)) errors['contact.document'] = 'Informe um CPF válido para o pagamento.'
+  if (paymentMethods.value.length && !/^\d{10,11}$/.test(contact.phone.replace(/\D/g, ''))) errors['contact.phone'] = 'Informe um telefone com DDD.'
   return !Object.keys(errors).some(key => key.startsWith('contact.'))
 }
 
@@ -147,6 +156,7 @@ function validateDelivery(): boolean {
 
 async function continueCheckout() {
   if (saving.value || createdOrder.value) return
+  if (paymentMethodsError.value) { submitError.value = 'Não foi possível carregar as opções de pagamento. Recarregue a página.'; return }
   submitError.value = ''
   if (!cart.value.items.length) { submitError.value = 'Seu carrinho está vazio.'; return }
   if (currentStep.value === 1) {
@@ -159,15 +169,20 @@ async function continueCheckout() {
   }
   if (!validateContact()) { currentStep.value = 1; return }
   if (!validateDelivery()) { currentStep.value = 2; return }
+  if (paymentMethods.value.length && !customer.value) {
+    await navigateTo({ path: '/login', query: { redirect: '/checkout' } })
+    return
+  }
   saving.value = true
   try {
     const delivery = selectedDelivery.value!
     const response = await $fetch<{ data: Order }>('/api/checkout', { method: 'POST', body: {
       customer: { name: `${contact.firstName.trim()} ${contact.lastName.trim()}`, email: contact.email.trim(), phone: contact.phone, document: contact.document },
-      shippingAddress: { ...address }, shippingProvider: delivery.provider, shippingServiceCode: delivery.serviceCode, shippingTotal: delivery.price,
+      shippingAddress: { ...address }, shippingProvider: delivery.provider, shippingServiceCode: delivery.serviceCode, shippingTotal: delivery.price, paymentMethodId: selectedPaymentMethod.value,
     } })
     createdOrder.value = response.data
     clearCartSession()
+    if (paymentMethods.value.length) await navigateTo({ path: `/pagamento/${response.data.id}`, query: { metodo: selectedPaymentMethod.value } })
   } catch (error) {
     submitError.value = errorMessage(error)
   } finally {
@@ -192,7 +207,7 @@ function goBack() {
           <section v-if="currentStep===1" class="form-section">
             <div class="section-title"><span>01</span><div><h2>Contato</h2><p>Usaremos estes dados para avisar sobre o pedido.</p></div></div>
             <p v-if="customer" class="customer-note">Dados de {{ customer.name }} carregados da sua conta. Você pode ajustá-los para esta compra.</p>
-            <div class="field-grid"><label class="wide">E-mail <span class="required" aria-hidden="true">*</span><input v-model="contact.email" type="email" autocomplete="email" placeholder="voce@email.com" :aria-invalid="Boolean(errors['contact.email'])" :class="{invalid:errors['contact.email']}"><span v-if="errors['contact.email']" class="field-error">{{ errors['contact.email'] }}</span></label><label>Nome <span class="required" aria-hidden="true">*</span><input v-model="contact.firstName" autocomplete="given-name" placeholder="Seu nome" :aria-invalid="Boolean(errors['contact.firstName'])" :class="{invalid:errors['contact.firstName']}"><span v-if="errors['contact.firstName']" class="field-error">{{ errors['contact.firstName'] }}</span></label><label>Sobrenome <span class="required" aria-hidden="true">*</span><input v-model="contact.lastName" autocomplete="family-name" placeholder="Seu sobrenome" :aria-invalid="Boolean(errors['contact.lastName'])" :class="{invalid:errors['contact.lastName']}"><span v-if="errors['contact.lastName']" class="field-error">{{ errors['contact.lastName'] }}</span></label><label>CPF<input v-mask="'cpf'" v-model="contact.document" inputmode="numeric" placeholder="000.000.000-00"></label><label>Telefone<input inputmode="tel" v-mask="'phone'" v-model="contact.phone" type="tel" autocomplete="tel" placeholder="(00) 00000-0000"></label></div>
+            <div class="field-grid"><label class="wide">E-mail <span class="required" aria-hidden="true">*</span><input v-model="contact.email" type="email" autocomplete="email" placeholder="voce@email.com" :aria-invalid="Boolean(errors['contact.email'])" :class="{invalid:errors['contact.email']}"><span v-if="errors['contact.email']" class="field-error">{{ errors['contact.email'] }}</span></label><label>Nome <span class="required" aria-hidden="true">*</span><input v-model="contact.firstName" autocomplete="given-name" placeholder="Seu nome" :aria-invalid="Boolean(errors['contact.firstName'])" :class="{invalid:errors['contact.firstName']}"><span v-if="errors['contact.firstName']" class="field-error">{{ errors['contact.firstName'] }}</span></label><label>Sobrenome <span class="required" aria-hidden="true">*</span><input v-model="contact.lastName" autocomplete="family-name" placeholder="Seu sobrenome" :aria-invalid="Boolean(errors['contact.lastName'])" :class="{invalid:errors['contact.lastName']}"><span v-if="errors['contact.lastName']" class="field-error">{{ errors['contact.lastName'] }}</span></label><label>CPF <span v-if="paymentMethods.length" class="required" aria-hidden="true">*</span><input v-mask="'cpf'" v-model="contact.document" inputmode="numeric" placeholder="000.000.000-00" :aria-invalid="Boolean(errors['contact.document'])" :class="{invalid:errors['contact.document']}"><span v-if="errors['contact.document']" class="field-error">{{ errors['contact.document'] }}</span></label><label>Telefone <span v-if="paymentMethods.length" class="required" aria-hidden="true">*</span><input inputmode="tel" v-mask="'phone'" v-model="contact.phone" type="tel" autocomplete="tel" placeholder="(00) 00000-0000" :aria-invalid="Boolean(errors['contact.phone'])" :class="{invalid:errors['contact.phone']}"><span v-if="errors['contact.phone']" class="field-error">{{ errors['contact.phone'] }}</span></label></div>
           </section>
 
           <section v-else-if="currentStep===2" class="form-section">
@@ -205,9 +220,16 @@ function goBack() {
             <div class="section-title"><span>03</span><div><h2>Revise seu pedido</h2><p>Confira seus dados e a entrega antes de confirmar.</p></div></div>
             <div class="order-review"><p><strong>{{ contact.firstName }} {{ contact.lastName }}</strong><br>{{ contact.email }}</p><p>{{ address.street }}, {{ address.number }}<br>{{ address.complement }} {{ address.district }}<br>{{ address.city }} / {{ address.state }} — {{ address.zipcode }}</p><p><strong>{{ selectedDelivery?.serviceName }}</strong><br>{{ selectedDelivery?.deadlineText }} — {{ money(selectedDelivery?.price || 0) }}</p></div>
           </section>
+          <section v-if="currentStep===3 && paymentMethods.length" class="form-section payment-choice">
+            <div class="section-title"><CreditCard :size="28"/><div><h2>Pagamento</h2><p>Escolha como deseja continuar o pagamento.</p></div></div>
+            <label v-for="method in paymentMethods" :key="method.id" :class="{selected:selectedPaymentMethod===method.id}"><input v-model="selectedPaymentMethod" type="radio" name="payment-method" :value="method.id"><span><strong>{{ method.name }}</strong><small>{{ paymentMethodsLabel(method.methods) }}</small><small v-if="method.maxInstallments>1 && method.methods.includes('CREDIT_CARD')">Até {{ method.maxInstallments }} parcelas, conforme condições do provedor.</small></span></label>
+            <p class="integration-note">Os dados do cartão, o Pix ou o boleto serão apresentados na página segura do provedor.</p>
+            <p v-if="!customer" class="customer-note">Entre ou crie sua conta para continuar. <NuxtLink :to="{path:'/login',query:{redirect:'/checkout'}}">Entrar na conta</NuxtLink></p>
+          </section>
+          <p v-if="paymentMethodsError" class="field-error" role="alert">Não foi possível carregar as opções de pagamento. Recarregue a página.</p>
           <p v-if="submitError" class="field-error" role="alert">{{ submitError }}</p>
-          <div class="checkout-actions"><button v-if="currentStep>1" type="button" class="back-step" :disabled="saving" @click="goBack"><ChevronLeft :size="16"/> Voltar</button><button type="submit" class="continue" :disabled="saving || shippingLoading || !cart.items.length">{{ saving ? 'Confirmando...' : currentStep===1 ? 'Continuar para entrega' : currentStep===2 ? 'Revisar pedido' : 'Confirmar pedido' }}</button></div>
-          <p class="integration-note">Ao confirmar, seu pedido será enviado à loja. Nenhuma cobrança é realizada nesta etapa.</p>
+          <div class="checkout-actions"><button v-if="currentStep>1" type="button" class="back-step" :disabled="saving" @click="goBack"><ChevronLeft :size="16"/> Voltar</button><button type="submit" class="continue" :disabled="saving || shippingLoading || !cart.items.length || Boolean(paymentMethodsError)">{{ saving ? 'Confirmando...' : currentStep===1 ? 'Continuar para entrega' : currentStep===2 ? 'Revisar pedido' : paymentMethods.length ? (customer ? 'Continuar para pagamento' : 'Entrar e continuar') : 'Confirmar pedido' }}</button></div>
+          <p class="integration-note">{{ paymentMethods.length ? 'Você será direcionado ao pagamento depois de confirmar o pedido.' : 'Ao confirmar, seu pedido será enviado à loja.' }}</p>
         </form>
         <section v-else class="form-section" role="status"><div class="section-title"><PackageCheck :size="30"/><div><h2>Pedido {{ createdOrder.number }} recebido</h2><p>Seu pedido foi enviado à loja com a entrega selecionada.</p></div></div><p>Total: <strong>{{ money(createdOrder.total) }}</strong></p><NuxtLink to="/" class="back">Continuar comprando</NuxtLink></section>
       </div>
@@ -254,4 +276,5 @@ function goBack() {
 .customer-note{margin:0 0 18px;border:1px solid #bfdbfe;border-radius:10px;background:#eff6ff;padding:12px 14px;color:#1e40af;font-size:13px;line-height:1.45}
 .required{display:inline;color:#b91c1c}.field-grid label{display:block}.field-grid label>input,.field-grid label>select{display:block;margin-top:8px}.field-grid label>.field-error{display:block;margin-top:6px}.shipping-calculator{display:flex;align-items:end;gap:14px;margin-top:18px;flex-wrap:wrap}.shipping-calculator label{display:grid;gap:8px;font-size:12px;font-weight:700}.shipping-calculator select{min-height:48px;border:1px solid #d1d5db;border-radius:10px;padding:0 12px;background:#fff}.calculate-shipping{min-height:48px;padding:0 20px;border:1px solid #2563eb;border-radius:10px;background:#eff6ff;color:#1d4ed8;font-weight:700;cursor:pointer}.calculate-shipping:disabled{opacity:.6;cursor:not-allowed}.field-error{color:#b91c1c;font-size:12px;line-height:1.5}.field-grid input.invalid,.field-grid select.invalid{border-color:#b91c1c}.order-review{font-size:14px;line-height:1.7;color:#374151}.delivery-options button:focus-visible,.calculate-shipping:focus-visible{outline:3px solid #2563eb;outline-offset:3px}
 .shipping-link{padding:0;border:0;background:transparent;color:var(--sf-primary,#2563eb);font:inherit;text-decoration:underline;text-underline-offset:3px;cursor:pointer}.shipping-link:focus-visible{outline:2px solid var(--sf-primary,#2563eb);outline-offset:4px}.summary-shipping{padding-top:16px;border-top:1px solid #e5e7eb}.summary-shipping-form>label{display:block;margin-bottom:8px;color:#374151;font-size:12px;font-weight:700}.summary-shipping-controls{display:flex;gap:8px}.summary-shipping-controls input{min-width:0;width:100%;height:44px;padding:0 12px;border:1px solid #d1d5db;border-radius:8px;background:#fff;color:#111827;font-size:16px}.summary-shipping-controls button{min-height:44px;padding:0 14px;border:0;border-radius:8px;background:var(--sf-primary,#2563eb);color:#fff;font-size:12px;font-weight:700;cursor:pointer}.summary-shipping-controls button:disabled,.summary-deliveries button:disabled{opacity:.6;cursor:not-allowed}.summary-shipping-controls input:focus-visible,.summary-shipping-controls button:focus-visible,.summary-deliveries button:focus-visible{outline:2px solid var(--sf-primary,#2563eb);outline-offset:3px}.summary-shipping-controls input[aria-invalid="true"]{border-color:#b91c1c}.summary-provider{margin-top:12px}.summary-provider select{display:block;width:100%;min-height:44px;margin-top:8px}.shipping-destination{display:flex;align-items:start;justify-content:space-between;gap:12px;font-size:12px;color:#374151}.shipping-destination small{display:block;margin-top:5px;color:#6b7280;line-height:1.5}.shipping-destination button{flex-shrink:0}.summary-deliveries{display:grid;margin-top:12px;gap:8px}.summary-deliveries button{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:56px;padding:10px 12px;border:1px solid #e5e7eb;border-radius:9px;background:#fff;color:#111827;text-align:left;cursor:pointer}.summary-deliveries button.selected{border-color:var(--sf-primary,#2563eb);background:#eff6ff}.summary-deliveries span{display:grid;gap:4px}.summary-deliveries strong,.summary-deliveries b{font-size:12px}.summary-deliveries small{font-size:11px;color:#6b7280}.summary dl.summary-total{margin-top:18px}.summary-total .total{font-variant-numeric:tabular-nums}
+.payment-choice>label{display:flex;align-items:start;gap:12px;padding:16px;margin-top:10px;border:1px solid #e5e7eb;border-radius:10px;cursor:pointer}.payment-choice>label.selected{border-color:var(--sf-primary,#2563eb);background:#eff6ff}.payment-choice>label input{margin-top:3px;accent-color:var(--sf-primary,#2563eb)}.payment-choice>label span{display:grid;gap:5px}.payment-choice strong{font-size:14px}.payment-choice small{font-size:12px;color:#6b7280}
 </style>

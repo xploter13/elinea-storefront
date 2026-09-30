@@ -1,8 +1,9 @@
-import type { Cart, CheckoutInput, ShippingOption } from '@elinea/sdk'
+import type { Cart, CheckoutInput, ShippingOption, PaymentMethod } from '@elinea/sdk'
+import { isValidCpf } from '../../shared/utils/checkout-payment'
 import { selectShippingOption } from '../../shared/utils/checkout-shipping'
 
 export default defineEventHandler(async (event) => {
-  const body = await readBody<CheckoutInput & { shippingServiceCode: string }>(event)
+  const body = await readBody<CheckoutInput & { shippingServiceCode: string, paymentMethodId?: number }>(event)
   if (!body?.customer || !body.shippingAddress || typeof body.shippingAddress.zipcode !== 'string' ||
       !/^\d{8}$/.test(body.shippingAddress.zipcode.replace(/\D/g, '')) ||
       typeof body.shippingProvider !== 'string' || typeof body.shippingServiceCode !== 'string' || typeof body.shippingTotal !== 'number') {
@@ -11,6 +12,14 @@ export default defineEventHandler(async (event) => {
   persistCartSession(event)
   try {
     const client = createServerElineaClient(event)
+    const paymentMethods: PaymentMethod[] = await client.payments.methods()
+    if (paymentMethods.length) {
+      if (!paymentMethods.some(method => method.id === body.paymentMethodId)) throw createError({ statusCode: 422, message: 'Selecione uma opção de pagamento disponível.' })
+      if (!isValidCpf(body.customer.document || '') || !/^\d{10,11}$/.test((body.customer.phone || '').replace(/\D/g, ''))) {
+        throw createError({ statusCode: 422, message: 'Informe CPF válido e telefone com DDD para o pagamento.' })
+      }
+      await client.customer.getProfile()
+    }
     const cart: Cart = await client.cart.get()
     if (!cart.items.length) throw createError({ statusCode: 422, message: 'Seu carrinho está vazio.' })
     const options: ShippingOption[] = await client.checkout.calculateShipping({

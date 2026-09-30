@@ -16,6 +16,7 @@ async function loadHandler(path) {
   const helperUrl = new URL('../shared/utils/checkout-shipping.ts', import.meta.url).href
   const code = transpileModule(source, { compilerOptions: { module: ModuleKind.ESNext } }).outputText
     .replace("'../../shared/utils/checkout-shipping'", JSON.stringify(helperUrl))
+    .replace("'../../shared/utils/checkout-payment'", JSON.stringify(new URL('../shared/utils/checkout-payment.ts', import.meta.url).href))
   return (await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)).default
 }
 const quote = await loadHandler('../server/api/shipping/quote.post.ts')
@@ -24,6 +25,8 @@ const option = { provider: 'correios', serviceCode: '03298', serviceName: 'PAC',
 function fixture() {
   const calls = []
   const event = { body: { customer: { name: 'Cliente', email: 'cliente@example.com' }, shippingAddress: { zipcode: '01001-000', street: 'Rua Teste', number: '1', city: 'São Paulo', state: 'SP', complement: 'Apto 2', district: 'Centro' }, shippingProvider: 'correios', shippingServiceCode: '03298', shippingTotal: 18.5 }, client: {
+    payments: { methods: async () => [] },
+    customer: { getProfile: async () => ({ id: 1 }) },
     cart: { get: async () => ({ items: [{ productId: 10, quantity: 2 }] }) },
     checkout: {
       calculateShipping: async input => { calls.push(['quote', input]); return [option] },
@@ -75,4 +78,17 @@ test('shipping quote rejects invalid CEP and quantities', async () => {
   await assert.rejects(() => quote(event), { statusCode: 422 })
   event.body = { provider: 'correios', zipcode: '01001000', items: [{ productId: 1, quantity: 0 }] }
   await assert.rejects(() => quote(event), { statusCode: 422 })
+})
+
+test('checkout validates payment availability and login before creating the order', async () => {
+  const { event, calls } = fixture()
+  event.client.payments.methods = async () => [{ id: 7 }]
+  await assert.rejects(() => checkout(event), { statusCode: 422 })
+  assert.equal(calls.length, 0)
+  event.body.paymentMethodId = 7
+  event.body.customer.document = '52998224725'
+  event.body.customer.phone = '11999999999'
+  event.client.customer.getProfile = async () => { throw Object.assign(new Error('Entre na conta'), { statusCode: 401 }) }
+  await assert.rejects(() => checkout(event), { statusCode: 401 })
+  assert.equal(calls.length, 0)
 })
