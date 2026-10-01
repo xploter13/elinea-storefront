@@ -3,8 +3,10 @@ export function paymentMethodsLabel(methods: string[]): string {
   return methods.map(method => labels[method] || method).join(' · ')
 }
 
-export function canResumePayment(billingStatus?: string | null): boolean {
-  return billingStatus === 'pending' || billingStatus === 'failed'
+export function canResumePayment(billingStatus?: string | null, orderStatus?: string | null): boolean {
+  if (billingStatus) return billingStatus === 'pending' || billingStatus === 'failed'
+
+  return orderStatus === 'pending'
 }
 
 export function isValidCpf(value: string): boolean {

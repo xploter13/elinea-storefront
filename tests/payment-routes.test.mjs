@@ -60,5 +60,8 @@ test('requires a valid hosted payment destination', () => {
 test('allows customers to resume only pending or failed payments', () => {
   assert.equal(canResumePayment('pending'), true)
   assert.equal(canResumePayment('failed'), true)
-  for (const status of ['paid', 'refunded', null, undefined]) assert.equal(canResumePayment(status), false)
+  assert.equal(canResumePayment(null, 'pending'), true)
+  assert.equal(canResumePayment(undefined, 'pending'), true)
+  assert.equal(canResumePayment('paid', 'pending'), false)
+  for (const status of ['paid', 'refunded', 'processing', null, undefined]) assert.equal(canResumePayment(status), false)
 })
