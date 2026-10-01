@@ -3,6 +3,10 @@ export function paymentMethodsLabel(methods: string[]): string {
   return methods.map(method => labels[method] || method).join(' · ')
 }
 
+export function canResumePayment(billingStatus?: string | null): boolean {
+  return billingStatus === 'pending' || billingStatus === 'failed'
+}
+
 export function isValidCpf(value: string): boolean {
   const digits = value.replace(/\D/g, '')
   if (!/^\d{11}$/.test(digits) || /^(\d)\1{10}$/.test(digits)) return false

@@ -1,9 +1,10 @@
 <script setup lang="ts">
 import { vMask } from '~/utils/input-mask'
-import { ArrowRight, ChevronDown, ChevronRight, CircleUserRound, House, LogIn, LogOut, MapPin, Package, Pencil, Plus, ShieldCheck, Trash2, UserRound, X } from '@lucide/vue'
+import { ArrowRight, ChevronDown, ChevronRight, CircleUserRound, CreditCard, House, LogIn, LogOut, MapPin, Package, Pencil, Plus, ShieldCheck, Trash2, UserRound, X } from '@lucide/vue'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import type { Customer, CustomerAddress, CustomerAddressInput, Order, Paginated } from '@elinea/sdk'
 import { ElineaButton } from '@elinea/ui'
+import { canResumePayment } from '#shared/utils/checkout-payment'
 
 type AccountSection = 'overview' | 'orders' | 'addresses' | 'profile' | 'security'
 const props = defineProps<{ storefront: StorefrontPayload, section: AccountSection }>()
@@ -247,7 +248,7 @@ onBeforeUnmount(() => window.removeEventListener('click', closeUserMenu))
           </template>
 
           <template v-else>
-            <section v-if="section === 'orders'" class="orders-panel"><div v-if="ordersPending" class="addresses-loading">Carregando pedidos...</div><div v-else-if="ordersError" class="empty-state"><h2>Não foi possível carregar seus pedidos.</h2><p>Tente atualizar a página.</p></div><div v-else-if="orders.length" class="order-list"><article v-for="order in orders" :key="order.id" class="order-card"><div><span>Pedido {{ order.number }}</span><strong>{{ money(order.total) }}</strong></div><p>{{ date(order.createdAt) }} · {{ order.status }}</p><ul><li v-for="item in order.items" :key="item.productId">{{ item.quantity }} × {{ item.name }}</li></ul></article></div><div v-else class="empty-state"><div class="state-icon"><Package :size="28"/></div><h2>Nenhum pedido por aqui.</h2><p>Quando você fizer uma compra, seus pedidos aparecerão nesta página.</p><NuxtLink to="/produtos">Explorar produtos <ChevronRight :size="17"/></NuxtLink></div><nav v-if="initialOrders?.meta && initialOrders.meta.last_page > 1" class="order-pagination" aria-label="Páginas de pedidos"><button type="button" :disabled="currentPage === 1 || ordersPending" @click="currentPage--">Anterior</button><span>Página {{ currentPage }} de {{ initialOrders.meta.last_page }}</span><button type="button" :disabled="currentPage >= initialOrders.meta.last_page || ordersPending" @click="currentPage++">Próxima</button></nav></section>
+            <section v-if="section === 'orders'" class="orders-panel"><div v-if="ordersPending" class="addresses-loading">Carregando pedidos...</div><div v-else-if="ordersError" class="empty-state"><h2>Não foi possível carregar seus pedidos.</h2><p>Tente atualizar a página.</p></div><div v-else-if="orders.length" class="order-list"><article v-for="order in orders" :key="order.id" class="order-card"><div><span>Pedido {{ order.number }}</span><strong>{{ money(order.total) }}</strong></div><p>{{ date(order.createdAt) }} · {{ order.status }}</p><ul><li v-for="item in order.items" :key="item.productId">{{ item.quantity }} × {{ item.name }}</li></ul><NuxtLink v-if="canResumePayment(order.billingStatus)" class="order-payment-link" :to="`/pagamento/${order.id}`"><CreditCard :size="17" />{{ order.billingStatus === 'failed' ? 'Tentar pagamento novamente' : 'Concluir pagamento' }}</NuxtLink></article></div><div v-else class="empty-state"><div class="state-icon"><Package :size="28"/></div><h2>Nenhum pedido por aqui.</h2><p>Quando você fizer uma compra, seus pedidos aparecerão nesta página.</p><NuxtLink to="/produtos">Explorar produtos <ChevronRight :size="17"/></NuxtLink></div><nav v-if="initialOrders?.meta && initialOrders.meta.last_page > 1" class="order-pagination" aria-label="Páginas de pedidos"><button type="button" :disabled="currentPage === 1 || ordersPending" @click="currentPage--">Anterior</button><span>Página {{ currentPage }} de {{ initialOrders.meta.last_page }}</span><button type="button" :disabled="currentPage >= initialOrders.meta.last_page || ordersPending" @click="currentPage++">Próxima</button></nav></section>
             <section v-else-if="section === 'addresses'" class="addresses-panel">
               <div class="addresses-toolbar">
                 <div><h2>Locais de entrega</h2><p>Gerencie os endereços usados nas suas compras.</p></div>
@@ -328,6 +329,8 @@ onBeforeUnmount(() => window.removeEventListener('click', closeUserMenu))
 .order-card>div{display:flex;justify-content:space-between;gap:1rem;font-weight:650}
 .order-card p{margin:.35rem 0 .8rem}
 .order-card ul{margin:0;padding-left:1.25rem}
+.order-payment-link{display:inline-flex;min-height:42px;align-items:center;gap:.5rem;margin-top:1rem;border-radius:.75rem;background:var(--gradient-primary);padding:0 1rem;color:var(--primary-foreground);font-size:13px;font-weight:700;text-decoration:none;box-shadow:var(--shadow-glow)}
+.order-payment-link:hover{filter:brightness(.97)}
 .order-pagination{display:flex;align-items:center;justify-content:center;gap:1rem;margin-top:1.25rem;font-size:13px}
 .order-pagination button{min-height:44px;border:1px solid var(--border);border-radius:.7rem;background:var(--card);padding:0 1rem;color:var(--foreground);cursor:pointer}
 .order-pagination button:disabled{cursor:not-allowed;opacity:.5}

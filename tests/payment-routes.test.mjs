@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { transpileModule, ModuleKind } from 'typescript'
-import { hostedPaymentUrl, isValidCpf, paymentMethodsLabel } from '../shared/utils/checkout-payment.ts'
+import { canResumePayment, hostedPaymentUrl, isValidCpf, paymentMethodsLabel } from '../shared/utils/checkout-payment.ts'
 
 globalThis.defineEventHandler = handler => handler
 globalThis.readBody = async event => event.body
@@ -55,4 +55,10 @@ test('validates CPF and displays only configured method labels', () => {
 test('requires a valid hosted payment destination', () => {
   assert.equal(hostedPaymentUrl('https://pagamento.pagbank.com.br/test'), 'https://pagamento.pagbank.com.br/test')
   for (const url of [null, 'javascript:alert(1)', 'http://unsafe.example', 'https://user:password@example.com']) assert.throws(() => hostedPaymentUrl(url))
+})
+
+test('allows customers to resume only pending or failed payments', () => {
+  assert.equal(canResumePayment('pending'), true)
+  assert.equal(canResumePayment('failed'), true)
+  for (const status of ['paid', 'refunded', null, undefined]) assert.equal(canResumePayment(status), false)
 })
