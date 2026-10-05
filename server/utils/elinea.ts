@@ -1,4 +1,4 @@
-import { AuthenticationError, createElineaClient, ElineaError, NotFoundError, ValidationError, type AnalyticsConfiguration, type Cart, type Category, type Product, type Store } from '@elinea/sdk'
+import { createElineaClient, ElineaError, type AnalyticsConfiguration, type Cart, type Category, type Product, type Store } from '@elinea/sdk'
 import type { H3Event } from 'h3'
 import type { StoreCart } from '#shared/types/commerce'
 import type { StoreCategory, StoreProduct, StoreSite } from '#shared/types/storefront'
@@ -19,8 +19,8 @@ export function createServerElineaClient(event: H3Event) {
 
 export function rethrowElineaError(error: unknown): never {
   if (!(error instanceof ElineaError)) throw error
-  const statusCode = error instanceof NotFoundError ? 404 : error instanceof ValidationError ? 422 : error instanceof AuthenticationError ? (error.status || 401) : (error.status || 502)
-  throw createError({ statusCode, statusMessage: error.message, message: error.message, data: error.details })
+  const { statusCode, message } = elineaErrorResponse(error)
+  throw createError({ statusCode, statusMessage: message, message, data: error.details })
 }
 
 export function persistCartSession(event: H3Event) {
