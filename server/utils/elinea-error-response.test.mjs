@@ -1,12 +1,34 @@
 import assert from 'node:assert/strict'
 import { test } from 'node:test'
-import { AuthenticationError, ElineaError, NotFoundError, ValidationError } from '@elinea/sdk'
+import { AuthenticationError, ElineaError, NotFoundError, RateLimitError, ValidationError } from '@elinea/sdk'
 import { elineaErrorResponse, rateLimitMessage } from './elinea-error-response.ts'
 
-test('rate limit responses become a friendly 429 regardless of the API message', () => {
-  const error = new ElineaError('Too Many Attempts.', { status: 429, details: { message: 'Too Many Attempts.' } })
+const genericRateLimitMessage = 'Muitas tentativas em pouco tempo. Aguarde alguns instantes e tente novamente.'
 
-  assert.deepEqual(elineaErrorResponse(error), { statusCode: 429, message: rateLimitMessage })
+test('rate limit tells the customer how long to wait when the API sends Retry-After', () => {
+  const error = new RateLimitError('Too Many Attempts.', { status: 429, retryAfterSeconds: 30 })
+
+  assert.deepEqual(elineaErrorResponse(error), { statusCode: 429, message: 'Muitas tentativas em pouco tempo. Tente novamente em 30 segundos.' })
+})
+
+test('rate limit uses the singular for a one second wait', () => {
+  const error = new RateLimitError('Too Many Attempts.', { status: 429, retryAfterSeconds: 1 })
+
+  assert.equal(elineaErrorResponse(error).message, 'Muitas tentativas em pouco tempo. Tente novamente em 1 segundo.')
+})
+
+for (const [name, error] of [
+  ['without Retry-After', new RateLimitError('Too Many Attempts.', { status: 429 })],
+  ['with a zero wait', new RateLimitError('Too Many Attempts.', { status: 429, retryAfterSeconds: 0 })],
+  ['from an SDK that only raises ElineaError', new ElineaError('Too Many Attempts.', { status: 429, details: { message: 'Too Many Attempts.' } })],
+]) {
+  test(`rate limit falls back to a generic 429 message ${name}`, () => {
+    assert.deepEqual(elineaErrorResponse(error), { statusCode: 429, message: genericRateLimitMessage })
+  })
+}
+
+test('rate limit exports the generic message for the no-wait case', () => {
+  assert.equal(rateLimitMessage(), genericRateLimitMessage)
 })
 
 for (const [name, error, statusCode] of [
