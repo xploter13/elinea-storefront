@@ -26,3 +26,27 @@ export function hostedPaymentUrl(value: string | null): string {
   if (url.protocol !== 'https:' || url.username || url.password) throw new Error('O endereço de pagamento retornado é inválido.')
   return url.href
 }
+
+export const transparentPaymentTypes = [
+  { code: 'CREDIT_CARD', slug: 'cartao', label: 'Cartão de crédito' },
+  { code: 'DEBIT_CARD', slug: 'debito', label: 'Cartão de débito' },
+  { code: 'PIX', slug: 'pix', label: 'Pix' },
+  { code: 'BOLETO', slug: 'boleto', label: 'Boleto' },
+] as const
+
+export function transparentCheckoutDestination(orderId: number, method: { id: number, methods: string[] }) {
+  const type = transparentPaymentTypes.find(type => method.methods.includes(type.code))
+  if (!Number.isSafeInteger(orderId) || orderId < 1 || !Number.isSafeInteger(method.id) || method.id < 1 || !type) {
+    throw new Error('Esta opção não possui uma forma de pagamento disponível.')
+  }
+  return { path: `/pagamento/checkout/${orderId}/${type.slug}`, query: { metodo: method.id } }
+}
+
+export function newPaymentAttemptKey(): string {
+  if (typeof crypto.randomUUID === 'function') return crypto.randomUUID()
+  const bytes = crypto.getRandomValues(new Uint8Array(16))
+  bytes[6] = (bytes[6]! & 15) | 64
+  bytes[8] = (bytes[8]! & 63) | 128
+  const hex = Array.from(bytes, byte => byte.toString(16).padStart(2, '0')).join('')
+  return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`
+}

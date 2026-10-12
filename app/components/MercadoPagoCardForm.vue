@@ -1,0 +1,95 @@
+<script setup lang="ts">
+import type { TokenizedPaymentCard } from '@elinea/sdk'
+import { loadPaymentScript } from '~/utils/payment-script'
+
+const props = defineProps<{ publicKey: string, amount: number, email?: string | null, busy: boolean, maxInstallments: number }>()
+const emit = defineEmits<{ tokenized: [card: TokenizedPaymentCard, installments: number] }>()
+const loading = ref(true)
+const initializationError = ref(false)
+const errorMessage = ref('')
+const form = ref<HTMLFormElement | null>(null)
+let disposed = false
+let readinessTimeout: ReturnType<typeof setInterval> | undefined
+interface CardFormController { getCardFormData(): { token: string, paymentMethodId: string, installments: string }, unmount(): void }
+let controller: CardFormController | undefined
+
+onMounted(async () => {
+  try {
+    await loadPaymentScript('https://sdk.mercadopago.com/js/v2')
+    if (disposed) return
+    const sdkWindow = window as unknown as { MercadoPago: new (key: string, options: { locale: string }) => { cardForm(options: object): CardFormController } }
+    const mp = new sdkWindow.MercadoPago(props.publicKey, { locale: 'pt-BR' })
+    controller = mp.cardForm({
+      amount: props.amount.toFixed(2), iframe: true,
+      form: {
+        id: 'form-checkout',
+        cardNumber: { id: 'form-checkout__cardNumber', placeholder: 'Número do cartão' },
+        expirationDate: { id: 'form-checkout__expirationDate', placeholder: 'MM/AA' },
+        securityCode: { id: 'form-checkout__securityCode', placeholder: 'CVV' },
+        cardholderName: { id: 'form-checkout__cardholderName' },
+        issuer: { id: 'form-checkout__issuer' }, installments: { id: 'form-checkout__installments' },
+        identificationType: { id: 'form-checkout__identificationType' }, identificationNumber: { id: 'form-checkout__identificationNumber' },
+        cardholderEmail: { id: 'form-checkout__cardholderEmail' },
+      },
+      callbacks: {
+        onFormMounted: (error?: unknown) => {
+          if (disposed) return
+          if (error) { loading.value = false; initializationError.value = true; errorMessage.value = 'Não foi possível carregar os campos seguros. Recarregue a página.' }
+        },
+        onSubmit: (event: Event) => {
+          event.preventDefault()
+          if (props.busy || loading.value || !controller) return
+          errorMessage.value = ''
+          const data = controller.getCardFormData()
+          if (!data.token || !data.paymentMethodId) { errorMessage.value = 'Confira os dados do cartão e tente novamente.'; return }
+          emit('tokenized', { token: data.token, paymentMethodId: data.paymentMethodId }, 1)
+        },
+        onError: () => { errorMessage.value = 'Confira os dados do cartão e tente novamente.' },
+      },
+    })
+    const deadline = Date.now() + 10000
+    readinessTimeout = setInterval(() => {
+      if (disposed || initializationError.value) { clearInterval(readinessTimeout); return }
+      const fields = ['cardNumber', 'expirationDate', 'securityCode']
+      const mounted = fields.every(name => form.value?.querySelector(`[data-mp-secure-field="${name}"] iframe`))
+      if (mounted) { loading.value = false; clearInterval(readinessTimeout); return }
+      if (Date.now() >= deadline) {
+        clearInterval(readinessTimeout)
+        loading.value = false
+        initializationError.value = true
+        errorMessage.value = 'Os campos seguros não carregaram. Verifique sua conexão e recarregue a página.'
+      }
+    }, 200)
+  } catch {
+    initializationError.value = true
+    loading.value = false
+    errorMessage.value = 'Não foi possível carregar o pagamento seguro. Recarregue a página.'
+  }
+})
+onBeforeUnmount(() => { disposed = true; clearInterval(readinessTimeout); controller?.unmount() })
+</script>
+
+<template>
+  <form id="form-checkout" ref="form" data-mp-public-key-source="runtime-endpoint" data-mp-payer-identification-source="form" :data-mp-payer-email-source="email ? 'application' : 'form'" data-mp-identification-type="CPF">
+    <p v-if="loading" role="status">Carregando os campos seguros do cartão...</p>
+    <div data-mp-field="cardNumber" class="card-field" role="group" aria-labelledby="card-number-label"><label id="card-number-label">Número do cartão</label><div id="form-checkout__cardNumber" data-mp-secure-field="cardNumber" class="secure-input" aria-labelledby="card-number-label" /></div>
+    <div class="card-row">
+      <div data-mp-field="expirationDate" class="card-field" role="group" aria-labelledby="expiration-label"><label id="expiration-label">Validade (MM/AA)</label><div id="form-checkout__expirationDate" data-mp-secure-field="expirationDate" class="secure-input" aria-labelledby="expiration-label" /></div>
+      <div data-mp-field="securityCode" class="card-field" role="group" aria-labelledby="security-code-label"><label id="security-code-label">Código de segurança</label><div id="form-checkout__securityCode" data-mp-secure-field="securityCode" class="secure-input" aria-labelledby="security-code-label" /></div>
+    </div>
+    <div data-mp-field="cardholderName" class="card-field"><label for="form-checkout__cardholderName">Nome impresso no cartão</label><input id="form-checkout__cardholderName" autocomplete="cc-name" required /></div>
+    <div data-mp-field="identificationNumber" class="card-field"><label for="form-checkout__identificationNumber">CPF do titular</label><input id="form-checkout__identificationNumber" inputmode="numeric" autocomplete="off" required /></div>
+    <div v-if="!email" data-mp-field="cardholderEmail" class="card-field"><label for="form-checkout__cardholderEmail">E-mail do comprador</label><input id="form-checkout__cardholderEmail" type="email" autocomplete="email" required /></div>
+    <input v-else id="form-checkout__cardholderEmail" type="hidden" :value="email" />
+    <select id="form-checkout__issuer" data-mp-sdk-required-field="issuer" hidden aria-hidden="true" tabindex="-1" />
+    <select id="form-checkout__installments" data-mp-sdk-required-field="installments" hidden aria-hidden="true" tabindex="-1" />
+    <select id="form-checkout__identificationType" data-mp-sdk-required-field="identificationType" hidden aria-hidden="true" tabindex="-1" />
+    <p class="card-note">Pagamento à vista no cartão de crédito.</p>
+    <p v-if="errorMessage" id="checkout-init-error" class="card-error" role="alert" aria-live="assertive">{{ errorMessage }}</p>
+    <button type="submit" :disabled="busy || loading || initializationError">{{ busy ? 'Processando pagamento...' : 'Pagar com cartão' }}</button>
+  </form>
+</template>
+
+<style scoped>
+form{display:grid;gap:18px;margin-top:24px}.card-field{display:grid;gap:8px;min-width:0;font-size:13px}.card-row{display:grid;grid-template-columns:1fr 1fr;gap:16px}.secure-input{position:relative;height:48px;min-height:48px;border:1px solid #d1d5db;border-radius:8px;background:#fff;overflow:hidden}.secure-input:deep(iframe){display:block!important;width:100%!important;height:100%!important;min-height:48px!important;border:0}.secure-input:focus-within,input:focus-visible{outline:3px solid var(--sf-primary,#2563eb);outline-offset:3px}input{box-sizing:border-box;min-width:0;width:100%;min-height:48px;border:1px solid #d1d5db;border-radius:8px;padding:12px;font:inherit}button{min-height:52px;border:0;border-radius:10px;background:var(--sf-primary,#2563eb);color:white;font:inherit;font-weight:700;cursor:pointer}button:disabled{opacity:.6;cursor:wait}button:focus-visible{outline:3px solid var(--sf-primary,#2563eb);outline-offset:4px}.card-error{color:#b91c1c;font-size:13px}.card-note{color:#6b7280;font-size:13px}
+</style>

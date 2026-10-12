@@ -1,12 +1,14 @@
 <script setup lang="ts">
 import { ArrowLeft, Check, CreditCard, ShieldCheck } from '@lucide/vue'
-import type { HostedPayment, Order, PaymentMethod } from '@elinea/sdk'
+import type { Order, PaymentMethod } from '@elinea/sdk'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
-import { hostedPaymentUrl, paymentMethodsLabel } from '#shared/utils/checkout-payment'
+import { paymentMethodsLabel } from '#shared/utils/checkout-payment'
 import SharedCommerceHeader from './SharedCommerceHeader.vue'
+import TransparentPaymentOptions from './TransparentPaymentOptions.vue'
+import { transparentCheckoutDestination } from '#shared/utils/checkout-payment'
 
-const props = defineProps<{ storefront: StorefrontPayload }>()
+const props = defineProps<{ storefront: StorefrontPayload, transparent?: boolean }>()
 const route = useRoute()
 const orderId = Number(route.params.id)
 if (!Number.isSafeInteger(orderId) || orderId < 1) throw createError({ statusCode: 404, message: 'Pedido não encontrado.' })
@@ -19,9 +21,9 @@ const { data: methodsResponse, error: methodsError, refresh: refreshMethods } = 
 const methods = computed(() => methodsResponse.value?.data || [])
 const selectedMethod = ref<number | null>(Number(route.query.metodo) || null)
 watch(methods, value => {
-  if (!value.some(method => method.id === selectedMethod.value)) selectedMethod.value = value[0]?.id || null
+  if (!value.some(method => method.id === selectedMethod.value)) selectedMethod.value = props.transparent ? null : value[0]?.id || null
 }, { immediate: true })
-const attempts = useCookie<Record<string, string>>(`elinea_payment_attempts_${props.storefront.site.slug}_${orderId}`, { default: () => ({}), sameSite: 'lax', path: '/', maxAge: 60 * 60 * 24 })
+const selectedPaymentMethod = computed(() => methods.value.find(method => method.id === selectedMethod.value))
 const paid = computed(() => order.value?.billingStatus === 'paid')
 const paying = ref(false)
 const refreshing = ref(false)
@@ -36,22 +38,17 @@ async function updateStatus() {
   if (orderError.value) errorMessage.value = 'Não foi possível atualizar o pedido. Tente novamente.'
 }
 
-async function pay() {
-  if (paying.value || paid.value || !selectedMethod.value) return
+async function openCheckout() {
+  if (!selectedPaymentMethod.value || paid.value) return
   errorMessage.value = ''
-  paying.value = true
   try {
-    const methodId = selectedMethod.value
-    const key = String(methodId)
-    if (!attempts.value[key]) attempts.value = { ...attempts.value, [key]: crypto.randomUUID() }
-    const response = await $fetch<{ data: HostedPayment }>('/api/payment', { method: 'POST', body: { orderId, paymentMethodId: methodId, idempotencyKey: attempts.value[key] } })
-    await navigateTo(hostedPaymentUrl(response.data.redirectUrl), { external: true })
+    await navigateTo(transparentCheckoutDestination(orderId, selectedPaymentMethod.value))
   } catch (error: any) {
-    errorMessage.value = error?.data?.message || error?.data?.statusMessage || error?.message || 'Não foi possível iniciar o pagamento. Tente novamente.'
-  } finally {
-    paying.value = false
+    errorMessage.value = error?.message || 'Não foi possível abrir o checkout. Tente novamente.'
   }
 }
+
+
 </script>
 
 <template>
@@ -60,18 +57,20 @@ async function pay() {
     <main v-if="order" class="payment-layout">
       <section class="payment-main">
         <NuxtLink to="/conta/pedidos" class="back"><ArrowLeft :size="16" aria-hidden="true"/> Meus pedidos</NuxtLink>
-        <div class="payment-heading"><span>Pedido {{ order.number }}</span><h1>{{ paid ? 'Pagamento confirmado' : 'Finalize seu pagamento' }}</h1><p>{{ paid ? 'Recebemos a confirmação do provedor. Seu pedido está em andamento.' : 'Escolha o provedor para pagar seu pedido com segurança.' }}</p></div>
+        <div class="payment-heading"><span>Pedido {{ order.number }}</span><h1>{{ paid ? 'Pagamento confirmado' : 'Finalize seu pagamento' }}</h1><p>{{ paid ? 'Recebemos a confirmação do provedor. Seu pedido está em andamento.' : transparent ? 'Escolha como deseja pagar seu pedido.' : 'Escolha o provedor para pagar seu pedido com segurança.' }}</p></div>
         <div v-if="paid" class="payment-success" role="status"><Check :size="24" aria-hidden="true"/><span>Seu pagamento foi confirmado.</span></div>
         <template v-else>
           <p v-if="returned" class="payment-status" role="status">{{ order.billingStatus==='failed' ? 'O pagamento não foi aprovado. Você pode tentar novamente.' : 'Aguardando a confirmação do provedor. Se você já pagou, atualize o status antes de tentar novamente.' }}</p>
-          <form v-if="methods.length" class="payment-form" @submit.prevent="pay">
+          <TransparentPaymentOptions v-if="transparent && selectedPaymentMethod" :key="`${selectedMethod}:${route.params.tipo}`" :order-id="orderId" :method="selectedPaymentMethod" :total="money(order.total)" :amount="order.total" :site-slug="storefront.site.slug" :email="order.customerEmail" :shipping-address="order.shippingAddress" @updated="updateStatus" />
+          <form v-else-if="methods.length && !transparent" class="payment-form" @submit.prevent="openCheckout">
             <fieldset :disabled="paying"><legend>Opção de pagamento <span aria-hidden="true">*</span></legend>
               <label v-for="method in methods" :key="method.id" :class="{selected:selectedMethod===method.id}"><input v-model="selectedMethod" type="radio" name="gateway" :value="method.id"><CreditCard :size="22" aria-hidden="true"/><span><strong>{{ method.name }}</strong><small>{{ paymentMethodsLabel(method.methods) }}</small><small v-if="method.maxInstallments>1 && method.methods.includes('CREDIT_CARD')">Até {{ method.maxInstallments }} parcelas, conforme condições do provedor.</small></span></label>
             </fieldset>
-            <p class="payment-help"><ShieldCheck :size="20" aria-hidden="true"/><span>Na próxima página você informa os dados do cartão ou gera o Pix ou boleto, conforme as opções da loja.</span></p>
-            <button class="pay-button" type="submit" :disabled="paying || !selectedMethod">{{ paying ? 'Preparando pagamento...' : 'Ir para pagamento' }}</button>
+            <p class="payment-help"><ShieldCheck :size="20" aria-hidden="true"/><span>Na próxima página você escolhe entre as formas de pagamento disponíveis para este pedido.</span></p>
+            <button data-mp-checkout-cta="checkout-api" class="pay-button" type="submit" :disabled="paying || !selectedMethod">{{ paying ? 'Preparando pagamento...' : 'Ir para pagamento' }}</button>
           </form>
-          <p v-else-if="!methodsError" class="payment-status">A loja não possui uma opção de pagamento disponível no momento. Seu pedido permanece registrado.</p>
+          <p v-else-if="!methodsError" class="payment-status">{{ transparent ? "Esta opção de pagamento não está disponível. Volte à seleção de pagamento para escolher outra opção." : "A loja não possui uma opção de pagamento disponível no momento. Seu pedido permanece registrado." }}</p>
+          <NuxtLink v-if="transparent && !selectedPaymentMethod" :to="`/pagamento/${orderId}`" class="back">Escolher opção de pagamento</NuxtLink>
           <p v-if="methodsError" class="payment-error" role="alert">Não foi possível carregar as opções de pagamento. Tente atualizar.</p>
         </template>
         <p v-if="errorMessage" class="payment-error" role="alert">{{ errorMessage }}</p>
