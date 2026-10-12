@@ -159,6 +159,7 @@ function retryPayment() {
             <button class="continue-payment full" type="submit" :disabled="paying || preparingCard">{{ paying || preparingCard ? 'Processando pagamento...' : 'Pagar com cartão' }}</button>
           </form>
         </template>
+        <p v-else-if="selected.code === 'CREDIT_CARD'" class="availability" role="status">O pagamento com cartão está temporariamente indisponível nesta loja. Escolha outra forma de pagamento ou entre em contato com a loja.</p>
         <form v-else-if="selected.code === 'BOLETO'" class="card-fields" @submit.prevent="submitPayment()">
           <p class="method-help full">Confirme seu endereço de cobrança para emitir o boleto.</p>
           <label class="full">Rua<input v-model="billingAddress.street" autocomplete="billing address-line1" required /></label>

@@ -2,7 +2,7 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
 import { transpileModule, ModuleKind } from 'typescript'
-import { ref } from 'vue'
+import { ref, computed, reactive } from 'vue'
 
 globalThis.defineEventHandler = handler => handler
 globalThis.readBody = async event => event.body
@@ -95,4 +95,37 @@ test('Mercado Pago mounts secure fields and emits only the tokenized card', asyn
     unmount()
     assert.equal(destroyed, true)
   } finally { globalThis.setInterval = timers.setInterval; globalThis.clearInterval = timers.clearInterval }
+})
+
+
+test('credit remains selected without a public key and mounts the secure form when configured', async () => {
+  const source = await readFile(new URL('../app/components/TransparentPaymentOptions.vue', import.meta.url), 'utf8')
+  const script = source.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1]
+  let mount
+  globalThis.ref = ref
+  globalThis.CreditCard = {}
+  globalThis.QrCode = {}
+  globalThis.ReceiptText = {}
+  globalThis.computed = computed
+  globalThis.reactive = reactive
+  globalThis.defineProps = () => ({ orderId: 7, method: { id: 2 }, siteSlug: 'store', amount: 68.5 })
+  globalThis.defineEmits = () => () => {}
+  globalThis.useRoute = () => ({ params: { tipo: 'cartao' } })
+  globalThis.useCookie = () => ref({})
+  globalThis.onMounted = callback => { mount = callback }
+  globalThis.onBeforeUnmount = () => {}
+  globalThis.$fetch = async () => ({ data: { provider: 'mercado_pago', publicKey: null, methods: ['PIX', 'CREDIT_CARD'], maxInstallments: 12 } })
+  const helper = await readFile(new URL('../shared/utils/checkout-payment.ts', import.meta.url), 'utf8')
+  const helperUrl = `data:text/javascript;base64,${Buffer.from(transpileModule(helper, { compilerOptions: { module: ModuleKind.ESNext } }).outputText).toString('base64')}`
+  const code = transpileModule(script.replace(/^import .* from '(?!#shared)[^']+'$/gm, '') + '\nexport { configuration, options, selected, loading }', { compilerOptions: { module: ModuleKind.ESNext } }).outputText.replace("'#shared/utils/checkout-payment'", JSON.stringify(helperUrl))
+  const component = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
+  await mount()
+  assert.equal(component.loading.value, false)
+  assert.equal(component.selected.value.code, 'CREDIT_CARD')
+  assert.deepEqual(component.options.value.map(option => option.code), ['CREDIT_CARD', 'PIX'])
+  assert.equal(component.configuration.value.publicKey, null)
+  assert.match(source, /selected.code === 'CREDIT_CARD' && configuration\?\.publicKey/)
+  assert.match(source, /v-else-if="selected.code === 'CREDIT_CARD'" class="availability"/)
+  component.configuration.value.publicKey = 'configured-public-key'
+  assert.ok(component.selected.value && component.configuration.value.publicKey)
 })
