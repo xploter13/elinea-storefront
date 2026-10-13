@@ -8,7 +8,7 @@ const loading = ref(true)
 const initializationError = ref(false)
 const errorMessage = ref('')
 let disposed = false
-interface CardFormController { getCardFormData(): { token: string, paymentMethodId: string, issuerId: string, installments: string }, unmount(): void }
+interface CardFormController { getCardFormData(): { token: string, paymentMethodId: string, issuerId?: string, installments: string, identificationType: string, identificationNumber: string }, unmount(): void }
 let controller: CardFormController | undefined
 
 function handleCardFormError(_error: unknown, stage?: string) {
@@ -53,12 +53,12 @@ onMounted(async () => {
           if (props.busy || loading.value || !controller) return
           errorMessage.value = ''
           const data = controller.getCardFormData()
-          if (!data.token || !data.paymentMethodId || !data.issuerId) { errorMessage.value = 'Não foi possível identificar o emissor do cartão. Confira os dados e tente novamente.'; return }
+          if (!data.token || !data.paymentMethodId || !data.identificationType || !data.identificationNumber) { errorMessage.value = 'Não foi possível validar os dados do titular. Confira o CPF e tente novamente.'; return }
           const selectedInstallments = Number.parseInt(data.installments, 10)
           const installments = Number.isSafeInteger(selectedInstallments) && selectedInstallments >= 1
             ? Math.min(selectedInstallments, props.maxInstallments)
             : 1
-          emit('tokenized', { token: data.token, paymentMethodId: data.paymentMethodId, issuerId: data.issuerId }, installments)
+          emit('tokenized', { token: data.token, paymentMethodId: data.paymentMethodId, issuerId: data.issuerId, identificationType: data.identificationType, identificationNumber: data.identificationNumber.replace(/\D/g, '') }, installments)
         },
         onError: handleCardFormError,
       },

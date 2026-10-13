@@ -74,7 +74,7 @@ test('Mercado Pago mounts secure fields and emits only the tokenized card', asyn
   globalThis.onBeforeUnmount = callback => { unmount = callback }
   globalThis.window = { MercadoPago: class { cardForm(input) {
     options = input
-    return { getCardFormData: () => ({ token: 'card-token', paymentMethodId: 'visa', issuerId: '310', installments: '3', cardNumber: 'never-send', securityCode: 'never-send' }), unmount: () => { destroyed = true } }
+    return { getCardFormData: () => ({ token: 'card-token', paymentMethodId: 'visa', issuerId: '310', installments: '3', identificationType: 'CPF', identificationNumber: '123.456.789-09', cardNumber: 'never-send', securityCode: 'never-send' }), unmount: () => { destroyed = true } }
   } } }
   const stub = `data:text/javascript;base64,${Buffer.from('export async function loadPaymentScript() {}').toString('base64')}`
   const code = transpileModule(script + '\nexport { loading, initializationError, errorMessage }', { compilerOptions: { module: ModuleKind.ESNext } }).outputText.replace("'~/utils/payment-script'", JSON.stringify(stub))
@@ -86,7 +86,7 @@ test('Mercado Pago mounts secure fields and emits only the tokenized card', asyn
   options.callbacks.onReady()
   assert.equal(component.loading.value, false)
   options.callbacks.onSubmit({ preventDefault() {} })
-  assert.deepEqual(emitted, [['tokenized', { token: 'card-token', paymentMethodId: 'visa', issuerId: '310' }, 3]])
+  assert.deepEqual(emitted, [['tokenized', { token: 'card-token', paymentMethodId: 'visa', issuerId: '310', identificationType: 'CPF', identificationNumber: '12345678909' }, 3]])
   options.callbacks.onError(new Error('token failed'), 'onCardTokenReceived')
   assert.match(component.errorMessage.value, /validar o cartão/)
   options.callbacks.onError(new Error('iframe failed'), 'onIframeLoad')
