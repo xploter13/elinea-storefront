@@ -8,7 +8,7 @@ const loading = ref(true)
 const initializationError = ref(false)
 const errorMessage = ref('')
 let disposed = false
-interface CardFormController { getCardFormData(): { token: string, paymentMethodId: string, installments: string }, unmount(): void }
+interface CardFormController { getCardFormData(): { token: string, paymentMethodId: string, issuerId: string, installments: string }, unmount(): void }
 let controller: CardFormController | undefined
 
 function handleCardFormError(_error: unknown, stage?: string) {
@@ -53,12 +53,12 @@ onMounted(async () => {
           if (props.busy || loading.value || !controller) return
           errorMessage.value = ''
           const data = controller.getCardFormData()
-          if (!data.token || !data.paymentMethodId) { errorMessage.value = 'Confira os dados do cartão e tente novamente.'; return }
+          if (!data.token || !data.paymentMethodId || !data.issuerId) { errorMessage.value = 'Não foi possível identificar o emissor do cartão. Confira os dados e tente novamente.'; return }
           const selectedInstallments = Number.parseInt(data.installments, 10)
           const installments = Number.isSafeInteger(selectedInstallments) && selectedInstallments >= 1
             ? Math.min(selectedInstallments, props.maxInstallments)
             : 1
-          emit('tokenized', { token: data.token, paymentMethodId: data.paymentMethodId }, installments)
+          emit('tokenized', { token: data.token, paymentMethodId: data.paymentMethodId, issuerId: data.issuerId }, installments)
         },
         onError: handleCardFormError,
       },
