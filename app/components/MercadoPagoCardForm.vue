@@ -7,11 +7,22 @@ const emit = defineEmits<{ tokenized: [card: TokenizedPaymentCard, installments:
 const loading = ref(true)
 const initializationError = ref(false)
 const errorMessage = ref('')
-const form = ref<HTMLFormElement | null>(null)
 let disposed = false
-let readinessTimeout: ReturnType<typeof setInterval> | undefined
 interface CardFormController { getCardFormData(): { token: string, paymentMethodId: string, installments: string }, unmount(): void }
 let controller: CardFormController | undefined
+
+function handleCardFormError(_error: unknown, stage?: string) {
+  if (disposed) return
+  loading.value = false
+  if (stage === 'onFormMounted' || stage === 'onIframeLoad' || stage === 'onIdentificationTypesReceived') {
+    initializationError.value = true
+    errorMessage.value = 'Não foi possível carregar os campos seguros. Recarregue a página.'
+    return
+  }
+  errorMessage.value = stage === 'onCardTokenReceived'
+    ? 'Não foi possível validar o cartão. Confira os dados e tente novamente.'
+    : 'Não foi possível consultar este cartão. Confira os dados e tente novamente.'
+}
 
 onMounted(async () => {
   try {
@@ -34,43 +45,35 @@ onMounted(async () => {
       callbacks: {
         onFormMounted: (error?: unknown) => {
           if (disposed) return
-          if (error) { loading.value = false; initializationError.value = true; errorMessage.value = 'Não foi possível carregar os campos seguros. Recarregue a página.' }
+          if (error) handleCardFormError(error, 'onFormMounted')
         },
+        onReady: () => { if (!disposed) loading.value = false },
         onSubmit: (event: Event) => {
           event.preventDefault()
           if (props.busy || loading.value || !controller) return
           errorMessage.value = ''
           const data = controller.getCardFormData()
           if (!data.token || !data.paymentMethodId) { errorMessage.value = 'Confira os dados do cartão e tente novamente.'; return }
-          emit('tokenized', { token: data.token, paymentMethodId: data.paymentMethodId }, 1)
+          const selectedInstallments = Number.parseInt(data.installments, 10)
+          const installments = Number.isSafeInteger(selectedInstallments) && selectedInstallments >= 1
+            ? Math.min(selectedInstallments, props.maxInstallments)
+            : 1
+          emit('tokenized', { token: data.token, paymentMethodId: data.paymentMethodId }, installments)
         },
-        onError: () => { errorMessage.value = 'Confira os dados do cartão e tente novamente.' },
+        onError: handleCardFormError,
       },
     })
-    const deadline = Date.now() + 10000
-    readinessTimeout = setInterval(() => {
-      if (disposed || initializationError.value) { clearInterval(readinessTimeout); return }
-      const fields = ['cardNumber', 'expirationDate', 'securityCode']
-      const mounted = fields.every(name => form.value?.querySelector(`[data-mp-secure-field="${name}"] iframe`))
-      if (mounted) { loading.value = false; clearInterval(readinessTimeout); return }
-      if (Date.now() >= deadline) {
-        clearInterval(readinessTimeout)
-        loading.value = false
-        initializationError.value = true
-        errorMessage.value = 'Os campos seguros não carregaram. Verifique sua conexão e recarregue a página.'
-      }
-    }, 200)
   } catch {
     initializationError.value = true
     loading.value = false
     errorMessage.value = 'Não foi possível carregar o pagamento seguro. Recarregue a página.'
   }
 })
-onBeforeUnmount(() => { disposed = true; clearInterval(readinessTimeout); controller?.unmount() })
+onBeforeUnmount(() => { disposed = true; controller?.unmount() })
 </script>
 
 <template>
-  <form id="form-checkout" ref="form" data-mp-public-key-source="runtime-endpoint" data-mp-payer-identification-source="form" :data-mp-payer-email-source="email ? 'application' : 'form'" data-mp-identification-type="CPF">
+  <form id="form-checkout" data-mp-public-key-source="runtime-endpoint" data-mp-payer-identification-source="form" :data-mp-payer-email-source="email ? 'application' : 'form'" data-mp-identification-type="CPF">
     <p v-if="loading" role="status">Carregando os campos seguros do cartão...</p>
     <div data-mp-field="cardNumber" class="card-field" role="group" aria-labelledby="card-number-label"><label id="card-number-label">Número do cartão</label><div id="form-checkout__cardNumber" data-mp-secure-field="cardNumber" class="secure-input" aria-labelledby="card-number-label" /></div>
     <div class="card-row">

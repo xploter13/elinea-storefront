@@ -64,11 +64,9 @@ test('Mercado Pago mounts secure fields and emits only the tokenized card', asyn
   const script = source.match(/<script setup lang="ts">([\s\S]*?)<\/script>/)[1]
   let mount
   let unmount
-  let interval
   let options
   let destroyed = false
   const emitted = []
-  const timers = { setInterval: globalThis.setInterval, clearInterval: globalThis.clearInterval }
   globalThis.ref = ref
   globalThis.defineProps = () => ({ publicKey: 'public-key', amount: 68.5, busy: false, maxInstallments: 6, email: 'customer@example.test' })
   globalThis.defineEmits = () => (...args) => emitted.push(args)
@@ -76,25 +74,26 @@ test('Mercado Pago mounts secure fields and emits only the tokenized card', asyn
   globalThis.onBeforeUnmount = callback => { unmount = callback }
   globalThis.window = { MercadoPago: class { cardForm(input) {
     options = input
-    return { getCardFormData: () => ({ token: 'card-token', paymentMethodId: 'visa', cardNumber: 'never-send', securityCode: 'never-send' }), unmount: () => { destroyed = true } }
+    return { getCardFormData: () => ({ token: 'card-token', paymentMethodId: 'visa', installments: '3', cardNumber: 'never-send', securityCode: 'never-send' }), unmount: () => { destroyed = true } }
   } } }
-  globalThis.setInterval = callback => { interval = callback; return 1 }
-  globalThis.clearInterval = () => {}
   const stub = `data:text/javascript;base64,${Buffer.from('export async function loadPaymentScript() {}').toString('base64')}`
-  const code = transpileModule(script + '\nexport { form, loading }', { compilerOptions: { module: ModuleKind.ESNext } }).outputText.replace("'~/utils/payment-script'", JSON.stringify(stub))
-  try {
-    const component = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
-    await mount()
-    assert.equal(options.iframe, true)
-    for (const field of ['issuer', 'installments', 'identificationType', 'cardNumber', 'expirationDate', 'securityCode']) assert.ok(options.form[field].id)
-    component.form.value = { querySelector: () => ({}) }
-    interval()
-    assert.equal(component.loading.value, false)
-    options.callbacks.onSubmit({ preventDefault() {} })
-    assert.deepEqual(emitted, [['tokenized', { token: 'card-token', paymentMethodId: 'visa' }, 1]])
-    unmount()
-    assert.equal(destroyed, true)
-  } finally { globalThis.setInterval = timers.setInterval; globalThis.clearInterval = timers.clearInterval }
+  const code = transpileModule(script + '\nexport { loading, initializationError, errorMessage }', { compilerOptions: { module: ModuleKind.ESNext } }).outputText.replace("'~/utils/payment-script'", JSON.stringify(stub))
+  const component = await import(`data:text/javascript;base64,${Buffer.from(code).toString('base64')}`)
+  await mount()
+  assert.equal(options.iframe, true)
+  for (const field of ['issuer', 'installments', 'identificationType', 'cardNumber', 'expirationDate', 'securityCode']) assert.ok(options.form[field].id)
+  assert.equal(component.loading.value, true)
+  options.callbacks.onReady()
+  assert.equal(component.loading.value, false)
+  options.callbacks.onSubmit({ preventDefault() {} })
+  assert.deepEqual(emitted, [['tokenized', { token: 'card-token', paymentMethodId: 'visa' }, 3]])
+  options.callbacks.onError(new Error('token failed'), 'onCardTokenReceived')
+  assert.match(component.errorMessage.value, /validar o cartão/)
+  options.callbacks.onError(new Error('iframe failed'), 'onIframeLoad')
+  assert.equal(component.initializationError.value, true)
+  assert.match(component.errorMessage.value, /campos seguros/)
+  unmount()
+  assert.equal(destroyed, true)
 })
 
 
