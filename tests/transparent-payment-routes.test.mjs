@@ -38,6 +38,13 @@ test('rejects raw card data, client amounts and malformed attempts before the SD
   assert.equal(calls, 0)
 })
 
+test('accepts Mercado Pago issuer and cardholder identification fields', async () => {
+  let forwarded
+  const card = { token: 'card-token', paymentMethodId: 'master', issuerId: '12749', identificationType: 'CPF', identificationNumber: '12345678909' }
+  await create({ body: { ...attempt, type: 'CREDIT_CARD', card, installments: 1 }, client: { payments: { createTransparent: async (_orderId, input) => { forwarded = input; return {} } } } })
+  assert.deepEqual(forwarded.card, card)
+})
+
 test('loads public configuration and payment status without caching', async () => {
   const calls = []
   const client = { payments: {

@@ -8,7 +8,7 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 422, message: 'Informe uma tentativa de pagamento válida.' })
   }
   if (body.type === 'CREDIT_CARD' && (!body.card || typeof body.card !== 'object' || Array.isArray(body.card) ||
-      Object.keys(body.card).some(key => !['token', 'paymentMethodId', 'encrypted', 'holderName'].includes(key)))) {
+      Object.keys(body.card).some(key => !['token', 'paymentMethodId', 'issuerId', 'identificationType', 'identificationNumber', 'encrypted', 'holderName'].includes(key)))) {
     throw createError({ statusCode: 422, message: 'Informe apenas o cartão tokenizado pelo provedor.' })
   }
   if (body.type === 'BOLETO' && (!body.billingAddress || typeof body.billingAddress !== 'object' || Array.isArray(body.billingAddress))) {
