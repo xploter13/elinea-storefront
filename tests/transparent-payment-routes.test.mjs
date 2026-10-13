@@ -125,6 +125,9 @@ test('credit remains selected without a public key and mounts the secure form wh
   assert.equal(component.configuration.value.publicKey, null)
   assert.match(source, /selected.code === 'CREDIT_CARD' && configuration\?\.publicKey/)
   assert.match(source, /v-else-if="selected.code === 'CREDIT_CARD'" class="availability"/)
+  assert.match(source, /class="alert alert-warning alert-soft payment-retry"/)
+  assert.match(source, /errorMessage && !pendingInput/)
+  assert.match(source, /Verificar pagamento/)
   component.configuration.value.publicKey = 'configured-public-key'
   assert.ok(component.selected.value && component.configuration.value.publicKey)
 })
