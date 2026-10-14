@@ -19,7 +19,6 @@ const categories = computed(() => {
   props.products.forEach(product => product.categories.forEach(category => map.set(category.id, category)))
   return [...map.values()].sort((a, b) => a.name.localeCompare(b.name, 'pt-BR'))
 })
-const saleProduct = computed(() => props.products.find(product => product.original_price && product.original_price > product.price) || props.products[0])
 const categoryCount = (categoryId: number) => props.products.filter(product => product.categories.some(category => category.id === categoryId)).length
 const categoryPreviewProduct = (categoryId: number) => props.products.find(product => product.categories.some(category => category.id === categoryId) && productImage(product)) || props.products.find(product => product.categories.some(category => category.id === categoryId))
 const maxProductPrice = computed(() => Math.max(0, ...props.products.map(product => product.price)))
@@ -58,19 +57,6 @@ watch(priceCeiling, value => { priceLimit.value = value }, { immediate: true })
       <ChevronRight :size="16" />
       <span>Produtos</span>
     </nav>
-
-    <section class="catalog-promo">
-      <div>
-        <h1>{{ title || 'Compre melhor, encontre mais rápido.' }}</h1>
-        <p>{{ description || 'Filtre por categoria, oferta e disponibilidade com a experiência de uma grande loja online.' }}</p>
-      </div>
-      <div v-if="saleProduct" class="promo-price">
-        <strong>{{ money(saleProduct.price) }}</strong>
-        <s v-if="saleProduct.original_price && saleProduct.original_price > saleProduct.price">{{ money(saleProduct.original_price) }}</s>
-        <NuxtLink :to="`/produto/${saleProduct.slug}`">Ver detalhes</NuxtLink>
-      </div>
-      <img v-if="saleProduct && productImage(saleProduct)" :src="productImage(saleProduct)!" :alt="saleProduct.name">
-    </section>
 
     <section v-if="categories.length" class="category-strip" aria-label="Categorias em destaque">
       <NuxtLink v-for="category in categories.slice(0, 8)" :key="category.id" :to="`/categoria/${category.slug}`">
