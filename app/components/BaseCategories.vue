@@ -1,14 +1,169 @@
 <script setup lang="ts">
-import { ArrowUpRight, Baby, Cross, HeartPulse, Leaf, ShieldPlus, Sparkles } from '@lucide/vue'
-import type { StoreCategory } from '#shared/types/storefront'
-defineProps<{ categories: StoreCategory[] }>()
-const icons = [HeartPulse, Sparkles, Baby, Leaf, ShieldPlus, Cross]
+import { ArrowRight, ChevronRight, PackageSearch, Search, X } from '@lucide/vue'
+import type { StoreCategory, StoreProduct, StorefrontPayload } from '#shared/types/storefront'
+import { categoryBranchIds, productsInCategory } from '~/utils/category-products'
+import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
+
+const props = defineProps<{ storefront: StorefrontPayload }>()
+const search = ref('')
+const { productImage, usePlaceholder } = useStorefrontCatalog(props.storefront)
+
+type CategoryGroup = {
+  root: StoreCategory
+  count: number
+  descendants: { category: StoreCategory, count: number }[]
+  preview?: StoreProduct
+}
+
+const activeCategories = computed(() => props.storefront.categories.filter(category => category.is_active))
+const groups = computed<CategoryGroup[]>(() => {
+  const categories = activeCategories.value
+  const activeIds = new Set(categories.map(category => category.id))
+  return categories
+    .filter(category => category.parent_id === null || !activeIds.has(category.parent_id))
+    .map((root) => {
+      const branchIds = categoryBranchIds(root.id, categories)
+      const products = productsInCategory(root.id, categories, props.storefront.products)
+      const descendants = categories
+        .filter(category => category.id !== root.id && branchIds.has(category.id))
+        .map(category => ({ category, count: productsInCategory(category.id, categories, props.storefront.products).length }))
+        .filter(item => item.count > 0)
+      return {
+        root,
+        count: products.length,
+        descendants,
+        preview: products.find(product => productImage(product)),
+      }
+    })
+    .filter(group => group.count > 0)
+})
+
+const normalized = (value: string) => value.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLocaleLowerCase('pt-BR')
+const filteredGroups = computed(() => {
+  const term = normalized(search.value.trim())
+  if (!term) return groups.value
+  return groups.value.flatMap((group) => {
+    if (normalized(group.root.name).includes(term)) return [group]
+    const descendants = group.descendants.filter(item => normalized(item.category.name).includes(term))
+    return descendants.length ? [{ ...group, descendants }] : []
+  })
+})
+const productLabel = (count: number) => `${count} ${count === 1 ? 'produto' : 'produtos'}`
 </script>
 
 <template>
-  <main class="categories-page"><div class="categories-heading"><span>Todos os cuidados</span><h1>O que você precisa hoje?</h1><p>Navegue por necessidade e encontre produtos para cada momento da sua rotina.</p></div><div v-if="categories.length" class="categories-list"><NuxtLink v-for="(category,index) in categories" :key="category.id" :to="`/categoria/${category.slug}`"><span class="number">{{ String(index+1).padStart(2,'0') }}</span><div class="category-icon"><component :is="icons[index % icons.length]" :size="27"/></div><div><h2>{{ category.name }}</h2><p>{{ category.description || 'Produtos selecionados para um cuidado simples e seguro.' }}</p></div><ArrowUpRight class="arrow" :size="24"/></NuxtLink></div><div v-else class="empty">As categorias da farmácia aparecerão aqui em breve.</div></main>
+  <main class="categories-page">
+    <nav class="breadcrumbs" aria-label="Navegação estrutural">
+      <NuxtLink to="/">Início</NuxtLink>
+      <ChevronRight :size="16" aria-hidden="true" />
+      <span aria-current="page">Categorias</span>
+    </nav>
+
+    <header class="page-intro">
+      <div>
+        <h1>Explore por categoria.</h1>
+        <p>Encontre os produtos da {{ storefront.site.name }} organizados por assunto e escolha por onde começar.</p>
+      </div>
+      <NuxtLink class="catalog-link" to="/produtos">Ver todos os produtos <ArrowRight :size="18" aria-hidden="true" /></NuxtLink>
+    </header>
+
+    <section class="category-section" aria-labelledby="category-section-title">
+      <div class="category-toolbar">
+        <div>
+          <h2 id="category-section-title">Categorias da loja</h2>
+          <p aria-live="polite">{{ search ? `${filteredGroups.length} ${filteredGroups.length === 1 ? 'resultado' : 'resultados'} para “${search}”` : `${groups.length} ${groups.length === 1 ? 'área disponível' : 'áreas disponíveis'}` }}</p>
+        </div>
+        <div v-if="groups.length" class="search-control">
+          <label for="category-search">Buscar categoria</label>
+          <div class="search-field">
+            <Search :size="19" aria-hidden="true" />
+            <input id="category-search" v-model="search" type="search" placeholder="Ex.: beleza, casa, esporte" autocomplete="off">
+            <button v-if="search" type="button" aria-label="Limpar busca" @click="search = ''"><X :size="18" aria-hidden="true" /></button>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="filteredGroups.length" class="category-grid">
+        <article v-for="group in filteredGroups" :key="group.root.id" class="category-group">
+          <div class="group-media">
+            <img v-if="group.preview && productImage(group.preview)" :src="productImage(group.preview)!" alt="" width="280" height="280" loading="lazy" @error="usePlaceholder">
+            <PackageSearch v-else :size="58" aria-hidden="true" />
+          </div>
+          <div class="group-content">
+            <NuxtLink class="group-title" :to="`/categoria/${group.root.slug}`">
+              <h3>{{ group.root.name }}</h3>
+              <ArrowRight :size="20" aria-hidden="true" />
+            </NuxtLink>
+            <p v-if="group.root.description" class="group-description">{{ group.root.description }}</p>
+            <span class="product-count">{{ productLabel(group.count) }}</span>
+            <div v-if="group.descendants.length" class="subcategories">
+              <span>Explore também</span>
+              <div>
+                <NuxtLink v-for="item in group.descendants" :key="item.category.id" :to="`/categoria/${item.category.slug}`">
+                  {{ item.category.name }} <small>{{ item.count }}</small>
+                </NuxtLink>
+              </div>
+            </div>
+          </div>
+        </article>
+      </div>
+
+      <div v-else-if="search" class="empty-state">
+        <PackageSearch :size="34" aria-hidden="true" />
+        <h3>Nenhuma categoria encontrada</h3>
+        <p>Tente outro nome ou veja todas as categorias disponíveis.</p>
+        <button type="button" @click="search = ''">Limpar busca</button>
+      </div>
+      <div v-else class="empty-state">
+        <PackageSearch :size="34" aria-hidden="true" />
+        <h3>Ainda não há categorias com produtos</h3>
+        <p>Explore o catálogo para conhecer o que está disponível na loja.</p>
+        <NuxtLink to="/produtos">Ver produtos <ArrowRight :size="17" aria-hidden="true" /></NuxtLink>
+      </div>
+    </section>
+  </main>
 </template>
 
 <style scoped>
-.categories-page{max-width:1400px;margin:auto;padding:76px 32px;background:#fff}.categories-heading{position:relative;overflow:hidden;padding:44px clamp(22px,4vw,56px);border:1px solid #e5e7eb;border-radius:18px;background:radial-gradient(circle at 86% 12%,rgba(255,122,26,.16),transparent 17rem),linear-gradient(135deg,#fff,#f8fafc);box-shadow:0 24px 70px rgba(15,23,42,.06)}.categories-heading:after{position:absolute;right:clamp(18px,5vw,74px);bottom:-62px;content:"+";color:rgba(37,99,235,.08);font-size:220px;font-weight:200;line-height:1}.categories-heading span{color:var(--sf-primary);font:700 11px ui-monospace,monospace;letter-spacing:.16em;text-transform:uppercase}.categories-heading h1{position:relative;z-index:1;max-width:920px;margin:14px 0 20px;font-family:var(--sf-display);font-size:clamp(52px,7vw,96px);font-weight:760;line-height:.94;letter-spacing:-.035em;text-wrap:balance}.categories-heading p{position:relative;z-index:1;max-width:600px;color:#64748b;font-size:16px;line-height:1.7}.categories-list{display:grid;grid-template-columns:1fr 1fr;margin-top:34px;gap:16px}.categories-list>a{position:relative;display:grid;grid-template-columns:38px 58px 1fr auto;align-items:start;gap:16px;min-height:210px;padding:28px;border:1px solid #e5e7eb;border-radius:16px;background:#fff;box-shadow:0 18px 46px rgba(15,23,42,.04);color:var(--sf-ink);text-decoration:none;overflow:hidden;transition:border-color .22s,box-shadow .22s,transform .22s}.categories-list>a:before{position:absolute;inset:auto 0 0;content:"";height:4px;background:linear-gradient(90deg,var(--sf-primary),rgba(255,122,26,.85));opacity:.72}.categories-list>a:hover{border-color:rgba(37,99,235,.28);box-shadow:0 26px 64px rgba(15,23,42,.08);transform:translateY(-3px)}.number{padding-top:14px;color:#94a3b8;font:650 10px ui-monospace,monospace}.category-icon{display:grid;width:54px;height:54px;place-items:center;border-radius:14px 14px 14px 5px;background:#eff6ff;color:var(--sf-primary);box-shadow:inset 0 0 0 1px rgba(37,99,235,.08)}.categories-list>a:nth-child(4n+2) .category-icon{background:#f1f5f9;color:#315f97}.categories-list>a:nth-child(4n+3) .category-icon{background:#fff7ed;color:#a66023}.categories-list h2{margin:8px 0 10px;font-family:var(--sf-display);font-size:31px;font-weight:700;letter-spacing:-.025em;text-wrap:balance}.categories-list p{max-width:42ch;margin:0;color:#64748b;font-size:13px;line-height:1.6}.arrow{margin-top:13px;color:var(--sf-primary);transition:transform .22s}.categories-list>a:hover .arrow{transform:translate(4px,-4px)}.empty{margin-top:34px;padding:70px;border:1px dashed #cbd5e1;border-radius:15px;background:#fff;text-align:center;color:#64748b}@media(max-width:800px){.categories-list{grid-template-columns:1fr}}@media(max-width:560px){.categories-page{padding:55px 16px}.categories-heading h1{font-size:52px}.categories-heading:after{font-size:160px}.categories-list{margin-top:20px}.categories-list>a{grid-template-columns:48px 1fr auto;min-height:180px;padding:22px 16px}.number{display:none}.category-icon{width:44px;height:44px}.categories-list h2{margin-top:5px;font-size:24px}}
+.categories-page{width:min(100% - 48px,1320px);margin:auto;padding:30px 0 88px;color:var(--sf-ink)}
+.breadcrumbs{display:flex;align-items:center;gap:8px;color:#667085;font-size:13px}
+.breadcrumbs a{color:#475467;text-decoration:none}.breadcrumbs a:hover{text-decoration:underline}
+.page-intro{display:flex;align-items:end;justify-content:space-between;gap:32px;padding:58px 0 56px;border-bottom:1px solid #e2e8f0}
+.page-intro h1{max-width:13ch;margin:0;color:var(--sf-ink);font-size:clamp(42px,5vw,72px);font-weight:760;line-height:1.04;letter-spacing:-.05em;text-wrap:balance}
+.page-intro p{max-width:62ch;margin:20px 0 0;color:#475467;font-size:17px;line-height:1.6}
+.catalog-link{display:inline-flex;min-height:48px;align-items:center;justify-content:center;gap:12px;flex:none;padding:0 18px;border-radius:10px;background:var(--sf-ink);color:#fff;font-size:14px;font-weight:700;text-decoration:none}
+.catalog-link:hover{background:#344054}
+.category-section{padding-top:34px}
+.category-toolbar{display:flex;align-items:end;justify-content:space-between;gap:32px;margin-bottom:26px}
+.category-toolbar h2{margin:0;font-size:26px;font-weight:740;letter-spacing:-.03em}
+.category-toolbar p{margin:5px 0 0;color:#667085;font-size:14px}
+.search-control{display:grid;width:min(100%,340px);gap:8px}.search-control label{color:#344054;font-size:13px;font-weight:700}
+.search-field{display:flex;min-height:48px;align-items:center;gap:10px;border:1px solid #cbd5e1;border-radius:10px;background:#fff;padding:0 13px;color:#667085}
+.search-field:focus-within{border-color:var(--sf-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--sf-primary) 15%,transparent)}
+.search-field input{width:100%;min-width:0;border:0;outline:0;background:transparent;color:var(--sf-ink);font:inherit;font-size:14px}
+.search-field input::placeholder{color:#98a2b3}.search-field button{display:grid;width:44px;height:44px;flex:none;place-items:center;border:0;border-radius:6px;background:transparent;color:#667085;cursor:pointer}
+.category-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px}
+.category-group{display:grid;grid-template-columns:165px minmax(0,1fr);min-height:260px;overflow:hidden;border:1px solid #e2e8f0;border-radius:16px;background:#fff}
+.group-media{display:grid;min-width:0;place-items:center;overflow:hidden;background:color-mix(in srgb,var(--sf-primary) 6%,#f8fafc);color:color-mix(in srgb,var(--sf-primary) 60%,#667085)}
+.group-media img{display:block;width:100%;height:100%;max-height:320px;object-fit:contain;padding:20px}
+.group-content{display:flex;min-width:0;flex-direction:column;align-items:flex-start;padding:26px}
+.group-title{display:flex;width:100%;min-height:44px;align-items:start;justify-content:space-between;gap:12px;color:var(--sf-ink);text-decoration:none}
+.group-title h3{margin:0;font-size:clamp(21px,2vw,27px);font-weight:730;line-height:1.2;letter-spacing:-.025em;text-wrap:balance}
+.group-title svg{flex:none;margin-top:4px;color:var(--sf-primary)}
+.group-title:hover h3{text-decoration:underline;text-decoration-thickness:1px;text-underline-offset:4px}
+.group-description{display:-webkit-box;overflow:hidden;margin:8px 0 0;color:#667085;font-size:14px;line-height:1.5;-webkit-box-orient:vertical;-webkit-line-clamp:2}
+.product-count{display:inline-block;margin-top:10px;color:#475467;font-size:13px;font-weight:650}
+.subcategories{width:100%;margin-top:auto;padding-top:20px}
+.subcategories>span{display:block;margin-bottom:10px;border-top:1px solid #e9edf2;padding-top:16px;color:#667085;font-size:12px;font-weight:700}
+.subcategories>div{display:flex;flex-wrap:wrap;gap:7px}
+.subcategories a{display:inline-flex;min-height:44px;align-items:center;gap:8px;border:1px solid #dbe2ea;border-radius:8px;background:#fff;padding:0 10px;color:#344054;font-size:13px;font-weight:650;text-decoration:none}
+.subcategories a:hover{border-color:var(--sf-primary);color:var(--sf-primary)}
+.subcategories small{color:#667085;font-size:11px;font-variant-numeric:tabular-nums}
+.empty-state{display:grid;justify-items:center;gap:10px;margin-top:18px;border:1px dashed #cbd5e1;border-radius:16px;background:#f8fafc;padding:66px 24px;text-align:center}
+.empty-state svg{color:var(--sf-primary)}.empty-state h3{margin:8px 0 0;font-size:22px}.empty-state p{margin:0;color:#667085}
+.empty-state button,.empty-state a{display:inline-flex;min-height:44px;align-items:center;gap:8px;margin-top:10px;border:0;border-radius:9px;background:var(--sf-primary);padding:0 18px;color:#fff;font:700 14px var(--sf-body);text-decoration:none;cursor:pointer}
+.categories-page :is(a,button):focus-visible{outline:3px solid var(--sf-primary);outline-offset:3px}
+@media(max-width:1000px){.category-grid{grid-template-columns:1fr}.category-group{grid-template-columns:190px minmax(0,1fr)}}
+@media(max-width:700px){.categories-page{width:min(100% - 32px,1320px);padding-top:22px}.page-intro{align-items:start;flex-direction:column;gap:24px;padding:42px 0}.page-intro p{font-size:15px}.category-toolbar{align-items:start;flex-direction:column;gap:22px}.search-control{width:100%}.category-group{grid-template-columns:145px minmax(0,1fr)}.group-content{padding:20px}.subcategories a{min-height:44px}}
+@media(max-width:520px){.page-intro h1{font-size:42px}.category-grid{gap:14px}.category-group{grid-template-columns:1fr}.group-media{height:160px}.group-media img{max-height:160px;padding:12px}.group-content{padding:20px}.group-title h3{font-size:24px}.empty-state{padding:48px 20px}}
 </style>

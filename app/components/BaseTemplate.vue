@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import type { StorefrontPayload } from '#shared/types/storefront'
 import type { StorefrontPage } from '~/utils/storefront-page'
+import { productsInCategory } from '~/utils/category-products'
 import BaseCookieConsent from './BaseCookieConsent.vue'
 import BaseFooter from './BaseFooter.vue'
 import BaseHeader from './BaseHeader.vue'
@@ -20,7 +21,9 @@ const category = computed(() => {
   const page = props.page
   return page.kind === 'category' ? props.storefront.categories.find(item => item.slug === page.slug) : undefined
 })
-const categoryProducts = computed(() => category.value ? props.storefront.products.filter(item => item.categories.some(value => value.id === category.value?.id)) : [])
+const categoryProducts = computed(() => category.value
+  ? productsInCategory(category.value.id, props.storefront.categories.filter(item => item.is_active), props.storefront.products)
+  : [])
 const theme = computed(() => props.storefront.theme)
 const themeStyle = computed(() => ({
   '--sf-primary': theme.value?.primary_color || '#2563eb',
@@ -52,7 +55,7 @@ const themeStyle = computed(() => ({
     <BaseHeader :storefront="storefront" :store-name="storefront.site.name" :logo-url="theme?.logo_url" :categories="storefront.categories" :theme="theme" />
     <BaseHome v-if="page.kind === 'home'" :storefront="storefront" :theme="theme" />
     <BaseProducts v-else-if="page.kind === 'products'" :storefront="storefront" :products="storefront.products" />
-    <BaseCategories v-else-if="page.kind === 'categories'" :categories="storefront.categories" />
+    <BaseCategories v-else-if="page.kind === 'categories'" :storefront="storefront" />
     <BaseProducts v-else-if="page.kind === 'category' && category" :storefront="storefront" :products="categoryProducts" :title="category.name" :description="category.description || undefined" />
     <BaseProductDetail v-else-if="page.kind === 'product' && product" :product="product" :storefront="storefront" />
     <BaseCart v-else-if="page.kind === 'cart'" :storefront="storefront" />
