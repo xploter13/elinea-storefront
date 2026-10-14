@@ -56,7 +56,7 @@ const themeStyle = computed(() => ({
     <BaseProducts v-else-if="page.kind === 'category' && category" :storefront="storefront" :products="categoryProducts" :title="category.name" :description="category.description || undefined" />
     <BaseProductDetail v-else-if="page.kind === 'product' && product" :product="product" :storefront="storefront" />
     <BaseCart v-else-if="page.kind === 'cart'" :storefront="storefront" />
-    <slot v-else-if="page.kind === 'login' || page.kind === 'register' || page.kind === 'password-reset'" />
+    <slot v-else-if="page.kind === 'login' || page.kind === 'register' || page.kind === 'password-reset' || page.kind === 'information'" />
     <BaseFooter :store-name="storefront.site.name" :theme="theme" />
     <BaseCookieConsent />
     <StorefrontCommerceOverlay :storefront="storefront" />
@@ -117,9 +117,4 @@ const themeStyle = computed(() => ({
 :global(.base-shell .newsletter p){font-size:13px}
 :global(.base-shell .footer-benefits strong){font-size:12px}
 :global(.base-shell .footer-benefits small){font-size:10px}
-:global(.base-shell .footer-main h3){font-size:14px}
-:global(.base-shell .footer-main a),
-:global(.base-shell .footer-main nav span){font-size:12px}
-:global(.base-shell .footer-brand p){font-size:13px}
-:global(.base-shell .footer-bottom){font-size:10px}
 </style>
