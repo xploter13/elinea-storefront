@@ -1,40 +1,61 @@
 <script setup lang="ts">
-import { ArrowRight, BadgeCheck, PackageSearch, Sparkles } from '@lucide/vue'
+import { ArrowRight, ArrowUpRight, PackageSearch } from '@lucide/vue'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
 
 const props = defineProps<{ storefront: StorefrontPayload }>()
 const { productImage, money } = useStorefrontCatalog(props.storefront)
-const products = computed(() => props.storefront.products.slice(0, 3))
+const products = computed(() => {
+  const featured = props.storefront.products.filter(product => product.is_featured)
+  const remaining = props.storefront.products.filter(product => !product.is_featured)
+  return [...featured, ...remaining].slice(0, 3)
+})
+const unavailableImages = ref<number[]>([])
+
+function hideImage(id: number) {
+  unavailableImages.value = [...unavailableImages.value, id]
+}
 </script>
 
 <template>
-  <section class="editorial-spotlight">
+  <section v-if="products.length" class="editorial-spotlight" aria-labelledby="curation-title">
     <div class="story">
-      <span class="kicker">curadoria da loja</span>
-      <h2>Uma vitrine com ritmo de compra, nao de prateleira.</h2>
-      <p>Produtos em destaque, categorias claras e compra rapida para transformar o template base em uma experiencia de ecommerce mais madura.</p>
-      <NuxtLink to="/produtos">Explorar vitrine <ArrowRight :size="17" /></NuxtLink>
+      <span class="section-label">Curadoria da loja</span>
+      <h2 id="curation-title">Uma seleção para começar sua busca.</h2>
+      <p>Conheça os produtos em destaque da {{ storefront.site.name }} e veja os detalhes antes de escolher.</p>
+      <NuxtLink class="browse-link" to="/produtos">Ver todos os produtos <ArrowRight :size="18" aria-hidden="true" /></NuxtLink>
     </div>
 
-    <div class="showcase" aria-label="Produtos em destaque">
-      <article v-for="(product, index) in products" :key="product.id" :class="`item item-${index + 1}`">
-        <span>{{ product.categories[0]?.name || 'Selecao' }}</span>
-        <img
-          v-if="productImage(product)"
-          :src="productImage(product)!"
-          :alt="product.name"
-          loading="lazy"
-        >
-        <PackageSearch v-else :size="42" />
-        <strong>{{ product.name }}</strong>
-        <small>{{ money(product.price) }}</small>
-      </article>
-      <div class="quality-note">
-        <BadgeCheck :size="20" />
-        <span>Produtos organizados para decisao rapida</span>
-      </div>
-      <Sparkles class="spark" :size="42" aria-hidden="true" />
+    <div class="showcase" :class="{ 'showcase-single': products.length === 1, 'showcase-pair': products.length === 2 }">
+      <NuxtLink
+        v-for="(product, index) in products"
+        :key="product.id"
+        class="product-card"
+        :class="{ 'featured-product': index === 0 }"
+        :to="`/produto/${product.slug}`"
+      >
+        <div class="product-media">
+          <img
+            v-if="productImage(product) && !unavailableImages.includes(product.id)"
+            :src="productImage(product)!"
+            alt=""
+            width="500"
+            height="500"
+            loading="lazy"
+            @error="hideImage(product.id)"
+          >
+          <PackageSearch v-else :size="48" aria-hidden="true" />
+          <span v-if="product.stock < 1" class="stock-badge">Esgotado</span>
+        </div>
+        <div class="product-copy">
+          <span class="category">{{ product.categories[0]?.name || 'Produtos da loja' }}</span>
+          <h3>{{ product.name }}</h3>
+          <div class="product-bottom">
+            <strong>{{ money(product.price) }}</strong>
+            <span class="card-arrow"><ArrowUpRight :size="17" aria-hidden="true" /></span>
+          </div>
+        </div>
+      </NuxtLink>
     </div>
   </section>
 </template>
@@ -42,187 +63,174 @@ const products = computed(() => props.storefront.products.slice(0, 3))
 <style scoped>
 .editorial-spotlight {
   display: grid;
-  grid-template-columns: minmax(0, .86fr) minmax(0, 1.14fr);
-  gap: clamp(28px, 5vw, 72px);
+  grid-template-columns: minmax(0, .72fr) minmax(0, 1.28fr);
+  align-items: center;
+  gap: clamp(28px, 4vw, 64px);
   width: min(100% - 40px, 1400px);
   margin: 72px auto 0;
-  align-items: center;
-  padding: clamp(30px, 5vw, 64px);
-  border-radius: 18px;
-  background:
-    linear-gradient(135deg, rgba(15, 23, 42, .96), rgba(37, 99, 235, .82)),
-    radial-gradient(circle at 80% 10%, rgba(255, 209, 164, .28), transparent 38%);
-  color: #fff;
-  overflow: hidden;
+  padding: clamp(24px, 4vw, 56px);
+  border: 1px solid #e4e9ed;
+  border-radius: 20px;
+  background: color-mix(in srgb, var(--sf-primary) 5%, #f8fafc);
 }
 
-.story {
-  position: relative;
-  z-index: 1;
+.story { min-width: 0; }
+.section-label {
+  display: inline-block;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--sf-primary);
+  color: var(--sf-ink);
+  font-size: 14px;
+  font-weight: 700;
 }
-
-.kicker {
-  color: #dbeafe;
-  font-size: 12px;
-  font-weight: 900;
-  letter-spacing: .16em;
-  text-transform: uppercase;
-}
-
 .story h2 {
-  max-width: 620px;
-  margin: 15px 0 18px;
-  font-size: clamp(34px, 4.5vw, 64px);
-  line-height: .96;
-  letter-spacing: -.04em;
+  max-width: 12ch;
+  margin: 24px 0 18px;
+  color: var(--sf-ink);
+  font-size: clamp(34px, 3.5vw, 54px);
+  line-height: 1.08;
+  letter-spacing: -.035em;
   text-wrap: balance;
 }
-
 .story p {
-  max-width: 54ch;
+  max-width: 42ch;
   margin: 0;
-  color: rgba(255, 255, 255, .74);
-  font-size: 15px;
-  line-height: 1.7;
+  color: #475467;
+  font-size: 16px;
+  line-height: 1.65;
 }
-
-.story a {
+.browse-link {
   display: inline-flex;
-  height: 46px;
+  min-height: 48px;
   align-items: center;
-  gap: 9px;
+  justify-content: center;
+  gap: 12px;
   margin-top: 28px;
-  padding: 0 18px;
-  border-radius: 8px;
-  background: #fff;
-  color: var(--sf-ink);
-  font-size: 13px;
-  font-weight: 900;
+  padding: 0 20px;
+  border-radius: 10px;
+  background: #172336;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
   text-decoration: none;
 }
+.browse-link:hover { background: #263b58; }
 
 .showcase {
+  display: grid;
+  grid-template-columns: minmax(0, 1.08fr) minmax(0, .92fr);
+  grid-template-rows: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  min-width: 0;
+}
+.product-card {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  overflow: hidden;
+  border: 1px solid #e3e8ed;
+  border-radius: 14px;
+  background: #fff;
+  color: var(--sf-ink);
+  text-decoration: none;
+  box-shadow: 0 12px 32px rgba(15, 23, 42, .045);
+  transition: border-color .2s ease, box-shadow .2s ease;
+}
+.product-card:hover {
+  border-color: color-mix(in srgb, var(--sf-primary) 35%, #d7dfe7);
+  box-shadow: 0 16px 36px rgba(15, 23, 42, .09);
+}
+.product-card:focus-visible, .browse-link:focus-visible {
+  outline: 3px solid var(--sf-primary);
+  outline-offset: 3px;
+}
+.featured-product { grid-row: span 2; }
+.product-media {
   position: relative;
   display: grid;
-  min-height: 390px;
+  height: 132px;
+  flex: none;
+  place-items: center;
+  overflow: hidden;
+  background: #f3f6f8;
+  color: #7b8b9a;
 }
-
-.item {
-  position: absolute;
-  display: grid;
-  width: min(235px, 44%);
-  gap: 8px;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, .32);
-  border-radius: 14px;
-  background: rgba(255, 255, 255, .9);
-  color: var(--sf-ink);
-  box-shadow: 0 22px 50px rgba(0, 0, 0, .18);
-}
-
-.item img,
-.item svg {
+.featured-product .product-media { height: auto; min-height: 265px; flex: 1; }
+.product-media img {
+  display: block;
   width: 100%;
-  height: 150px;
+  height: 100%;
+  max-height: 320px;
+  padding: 18px;
   object-fit: contain;
-  color: var(--sf-primary);
+  transition: transform .24s ease;
 }
-
-.item span {
-  color: var(--sf-primary);
-  font-size: 10px;
-  font-weight: 900;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-.item strong {
-  min-height: 38px;
-  font-size: 14px;
-  line-height: 1.35;
-}
-
-.item small {
-  color: var(--sf-primary);
-  font-size: 18px;
-  font-weight: 900;
-  font-variant-numeric: tabular-nums;
-}
-
-.item-1 {
-  left: 2%;
-  top: 16%;
-  transform: rotate(-4deg);
-}
-
-.item-2 {
-  left: 32%;
-  top: 3%;
-  z-index: 2;
-  transform: rotate(2deg);
-}
-
-.item-3 {
-  right: 2%;
-  bottom: 4%;
-  transform: rotate(-1deg);
-}
-
-.quality-note {
+.product-card:hover .product-media img { transform: scale(1.035); }
+.stock-badge {
   position: absolute;
-  left: 8%;
-  bottom: 7%;
-  display: flex;
-  max-width: 250px;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 14px;
-  border-radius: 10px;
-  background: rgba(255, 255, 255, .13);
-  color: rgba(255, 255, 255, .9);
+  top: 12px;
+  left: 12px;
+  padding: 5px 9px;
+  border-radius: 6px;
+  background: #fff;
+  color: #475467;
   font-size: 12px;
-  font-weight: 800;
+  font-weight: 700;
 }
-
-.spark {
-  position: absolute;
-  right: 8%;
-  top: 10%;
-  color: #ffd1a4;
+.product-copy { display: flex; min-width: 0; flex: 1; flex-direction: column; padding: 16px 18px 18px; }
+.category { color: #667085; font-size: 12px; font-weight: 600; line-height: 1.35; }
+.product-copy h3 {
+  margin: 7px 0 12px;
+  color: var(--sf-ink);
+  font-size: 16px;
+  font-weight: 700;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
 }
-
-@media (max-width: 900px) {
-  .editorial-spotlight {
-    grid-template-columns: 1fr;
-  }
-
-  .showcase {
-    min-height: 430px;
-  }
+.featured-product .product-copy h3 { font-size: 20px; }
+.product-bottom { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: auto; }
+.product-bottom strong { color: var(--sf-ink); font-size: 18px; font-variant-numeric: tabular-nums; }
+.card-arrow {
+  display: grid;
+  width: 32px;
+  height: 32px;
+  flex: none;
+  place-items: center;
+  border: 1px solid #e3e8ed;
+  border-radius: 50%;
+  color: var(--sf-ink);
 }
+.product-card:hover .card-arrow { border-color: var(--sf-primary); color: var(--sf-primary); }
+.showcase-single { grid-template-columns: 1fr; grid-template-rows: auto; }
+.showcase-pair { grid-template-rows: auto; }
+.showcase-single .featured-product, .showcase-pair .featured-product { grid-row: auto; }
+.showcase-single .product-media, .showcase-pair .product-media { height: 240px; flex: none; }
 
+@media (max-width: 980px) {
+  .editorial-spotlight { grid-template-columns: 1fr; }
+  .story h2 { max-width: 20ch; }
+}
 @media (max-width: 620px) {
-  .editorial-spotlight {
-    width: min(100% - 24px, 1400px);
-    padding: 28px 18px;
-  }
-
-  .showcase {
-    min-height: auto;
-    gap: 12px;
-  }
-
-  .item,
-  .quality-note,
-  .spark {
-    position: static;
-    width: 100%;
-    transform: none;
-  }
-
-  .item img,
-  .item svg {
-    height: 120px;
-  }
+  .editorial-spotlight { width: min(100% - 24px, 1400px); margin-top: 48px; padding: 22px; }
+  .story h2 { margin-top: 20px; font-size: clamp(30px, 8vw, 40px); }
+  .browse-link { width: 100%; }
+  .showcase { gap: 10px; }
+  .showcase-pair { grid-template-columns: 1fr; }
+  .featured-product { grid-column: 1 / -1; grid-row: auto; }
+  .featured-product .product-media { height: 200px; min-height: 0; flex: none; }
+  .product-copy { padding: 14px; }
+}
+@media (max-width: 480px) {
+  .showcase, .showcase-single, .showcase-pair { grid-template-columns: 1fr; grid-template-rows: auto; }
+  .product-card, .featured-product { display: grid; grid-template-columns: 110px minmax(0, 1fr); }
+  .product-media, .featured-product .product-media, .showcase-single .product-media, .showcase-pair .product-media { width: 110px; height: 100%; min-height: 132px; }
+  .product-media img { max-height: 150px; padding: 10px; }
+  .product-copy { padding: 12px 14px; }
+  .product-copy h3, .featured-product .product-copy h3 { margin: 5px 0 10px; font-size: 15px; }
+  .product-bottom strong { font-size: 16px; }
+  .card-arrow { width: 28px; height: 28px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .product-card, .product-media img { transition: none; }
 }
 </style>
