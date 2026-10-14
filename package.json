@@ -14,6 +14,7 @@
     "@elinea/sdk": "file:../elinea-sdk",
     "@elinea/ui": "file:../elinea-ui",
     "@lucide/vue": "^1.34.0",
+    "gsap": "^3.15.0",
     "nuxt": "^4.5.2",
     "vue": "^3.5.41",
     "vue-router": "^5.2.0"
