@@ -83,33 +83,6 @@ const dealProducts = computed(() => {
       <div v-else class="empty-row">As categorias estão sendo organizadas.</div>
     </section>
 
-    <section class="promo-grid page-width">
-      <article class="promo mint">
-        <div>
-          <h2>{{ theme?.promo_primary_title || 'Essenciais para a rotina' }}</h2>
-          <p>{{ theme?.promo_primary_text || 'Produtos que vale ter sempre por perto.' }}</p>
-          <NuxtLink to="/produtos">Ver produtos</NuxtLink>
-        </div><img v-if="heroProduct && productImage(heroProduct)" :src="productImage(heroProduct)!"
-          :alt="heroProduct.name">
-      </article>
-      <article class="promo blue">
-        <div>
-          <h2>{{ theme?.promo_secondary_title || 'Cuidado simples, todos os dias' }}</h2>
-          <p>{{ theme?.promo_secondary_text || 'Encontre tudo em poucos cliques.' }}</p>
-          <NuxtLink to="/categorias">Explorar</NuxtLink>
-        </div><img v-if="secondaryProduct && productImage(secondaryProduct)" :src="productImage(secondaryProduct)!"
-          :alt="secondaryProduct.name">
-      </article>
-      <article class="promo peach">
-        <div>
-          <h2>{{ theme?.promo_tertiary_title || 'Ofertas que fazem sentido' }}</h2>
-          <p>{{ theme?.promo_tertiary_text || 'Preços especiais na seleção da loja.' }}</p>
-          <NuxtLink to="/produtos">Conferir ofertas</NuxtLink>
-        </div>
-        <BadgePercent :size="72" />
-      </article>
-    </section>
-
     <BaseEditorialSpotlight :storefront="storefront" />
 
     <section class="deals page-width">
