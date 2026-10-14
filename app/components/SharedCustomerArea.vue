@@ -1,10 +1,10 @@
 <script setup lang="ts">
 import { vMask } from '~/utils/input-mask'
-import { ArrowRight, ChevronDown, ChevronRight, CircleUserRound, CreditCard, House, LogIn, LogOut, MapPin, Package, Pencil, Plus, ShieldCheck, Trash2, UserRound, X } from '@lucide/vue'
+import { ArrowRight, ChevronDown, CircleUserRound, House, LogIn, LogOut, MapPin, Package, Pencil, Plus, ShieldCheck, Trash2, UserRound, X } from '@lucide/vue'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import type { Customer, CustomerAddress, CustomerAddressInput, Order, Paginated } from '@elinea/sdk'
 import { ElineaButton } from '@elinea/ui'
-import { canResumePayment } from '#shared/utils/checkout-payment'
+import { orderStatusLabel } from '~/utils/order-display'
 
 type AccountSection = 'overview' | 'orders' | 'addresses' | 'profile' | 'security'
 const props = defineProps<{ storefront: StorefrontPayload, section: AccountSection }>()
@@ -49,10 +49,9 @@ const { data: initialAddresses, pending: addressesPending } = await useFetch<{ d
   ignoreResponseError: true,
 })
 const addresses = ref<CustomerAddress[]>(initialAddresses.value?.data || [])
-const currentPage = ref(1)
 const { data: initialOrders, pending: ordersPending, error: ordersError } = await useFetch<Paginated<Order>>('/api/orders', {
-  immediate: (section.value === 'overview' || section.value === 'orders') && Boolean(customer.value),
-  query: { page: currentPage },
+  immediate: section.value === 'overview' && Boolean(customer.value),
+  query: { page: 1 },
 })
 const orders = computed(() => initialOrders.value?.data || [])
 const orderCount = computed(() => initialOrders.value?.meta?.total ?? orders.value.length)
@@ -244,11 +243,11 @@ onBeforeUnmount(() => window.removeEventListener('click', closeUserMenu))
               <div class="welcome-card"><div><span>Comece por aqui</span><h2>Entre para acompanhar seus pedidos.</h2><p>Use o mesmo e-mail informado nas suas compras.</p></div><LogIn :size="42"/></div>
               <NuxtLink to="/login">Entrar na conta <ArrowRight :size="17" /></NuxtLink>
             </template>
-            <div class="activity-grid"><div class="panel-card"><div class="panel-heading"><span>Atividade recente</span><NuxtLink to="/conta/pedidos">Ver pedidos</NuxtLink></div><div v-if="orders.length" class="order-list"><article v-for="order in orders.slice(0, 3)" :key="order.id" class="order-row"><span><strong>Pedido {{ order.number }}</strong><small>{{ date(order.createdAt) }} · {{ order.status }}</small></span><strong>{{ money(order.total) }}</strong></article></div><div v-else class="panel-empty"><Package :size="20"/><span>{{ ordersError ? 'Não foi possível carregar os pedidos.' : 'Nenhuma atividade recente' }}</span><small v-if="!ordersError">Seus pedidos aparecerão aqui.</small></div></div><div class="panel-card"><div class="panel-heading"><span>Acesso rápido</span></div><div class="quick-links"><NuxtLink to="/conta/dados"><CircleUserRound :size="17"/>Atualizar meus dados<ArrowRight :size="15"/></NuxtLink><NuxtLink to="/conta/enderecos"><MapPin :size="17"/>Gerenciar endereços<ArrowRight :size="15"/></NuxtLink><NuxtLink to="/conta/seguranca"><ShieldCheck :size="17"/>Revisar segurança<ArrowRight :size="15"/></NuxtLink></div></div></div>
+            <div class="activity-grid"><div class="panel-card"><div class="panel-heading"><span>Atividade recente</span><NuxtLink to="/conta/pedidos">Ver pedidos</NuxtLink></div><div v-if="orders.length" class="order-list"><article v-for="order in orders.slice(0, 3)" :key="order.id" class="order-row"><span><strong>Pedido {{ order.number }}</strong><small>{{ date(order.createdAt) }} · {{ orderStatusLabel(order.status) }}</small></span><strong>{{ money(order.total) }}</strong></article></div><div v-else class="panel-empty"><Package :size="20"/><span>{{ ordersError ? 'Não foi possível carregar os pedidos.' : 'Nenhuma atividade recente' }}</span><small v-if="!ordersError">Seus pedidos aparecerão aqui.</small></div></div><div class="panel-card"><div class="panel-heading"><span>Acesso rápido</span></div><div class="quick-links"><NuxtLink to="/conta/dados"><CircleUserRound :size="17"/>Atualizar meus dados<ArrowRight :size="15"/></NuxtLink><NuxtLink to="/conta/enderecos"><MapPin :size="17"/>Gerenciar endereços<ArrowRight :size="15"/></NuxtLink><NuxtLink to="/conta/seguranca"><ShieldCheck :size="17"/>Revisar segurança<ArrowRight :size="15"/></NuxtLink></div></div></div>
           </template>
 
           <template v-else>
-            <section v-if="section === 'orders'" class="orders-panel"><div v-if="ordersPending" class="addresses-loading">Carregando pedidos...</div><div v-else-if="ordersError" class="empty-state"><h2>Não foi possível carregar seus pedidos.</h2><p>Tente atualizar a página.</p></div><div v-else-if="orders.length" class="order-list"><article v-for="order in orders" :key="order.id" class="order-card"><div><span>Pedido {{ order.number }}</span><strong>{{ money(order.total) }}</strong></div><p>{{ date(order.createdAt) }} · {{ order.status }}</p><ul><li v-for="item in order.items" :key="item.productId">{{ item.quantity }} × {{ item.name }}</li></ul><NuxtLink v-if="canResumePayment(order.billingStatus, order.status)" class="order-payment-link" :to="`/pagamento/${order.id}`"><CreditCard :size="17" />{{ order.billingStatus === 'failed' ? 'Tentar pagamento novamente' : 'Concluir pagamento' }}</NuxtLink></article></div><div v-else class="empty-state"><div class="state-icon"><Package :size="28"/></div><h2>Nenhum pedido por aqui.</h2><p>Quando você fizer uma compra, seus pedidos aparecerão nesta página.</p><NuxtLink to="/produtos">Explorar produtos <ChevronRight :size="17"/></NuxtLink></div><nav v-if="initialOrders?.meta && initialOrders.meta.last_page > 1" class="order-pagination" aria-label="Páginas de pedidos"><button type="button" :disabled="currentPage === 1 || ordersPending" @click="currentPage--">Anterior</button><span>Página {{ currentPage }} de {{ initialOrders.meta.last_page }}</span><button type="button" :disabled="currentPage >= initialOrders.meta.last_page || ordersPending" @click="currentPage++">Próxima</button></nav></section>
+            <CustomerOrderHistory v-if="section === 'orders'" />
             <section v-else-if="section === 'addresses'" class="addresses-panel">
               <div class="addresses-toolbar">
                 <div><h2>Locais de entrega</h2><p>Gerencie os endereços usados nas suas compras.</p></div>
