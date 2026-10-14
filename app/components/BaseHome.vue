@@ -8,10 +8,15 @@ import BaseProductCard from './BaseProductCard.vue'
 import BaseServiceRibbon from './BaseServiceRibbon.vue'
 
 const props = defineProps<{ storefront: StorefrontPayload, theme: StorefrontBranding }>()
-const { activeCategories, productImage, usePlaceholder } = useStorefrontCatalog(props.storefront)
+const { activeCategories, productImage, usePlaceholder, money } = useStorefrontCatalog(props.storefront)
 const featured = computed(() => (props.storefront.products.some(item => item.is_featured) ? props.storefront.products.filter(item => item.is_featured) : props.storefront.products).slice(0, 12))
 const heroProduct = computed(() => featured.value.find(item => productImage(item)) || featured.value[0])
 const secondaryProduct = computed(() => featured.value.find(item => item.id !== heroProduct.value?.id && productImage(item)))
+const updatesProduct = computed(() =>
+  props.storefront.products.find(item => !item.is_featured && item.stock > 0 && productImage(item))
+  || props.storefront.products.find(item => item.stock > 0 && productImage(item))
+  || props.storefront.products[0]
+)
 const categoryIcons = [HeartPulse, Sparkles, Baby, Bandage, Cross, BadgePercent]
 const activeDealTab = ref<'best' | 'new' | 'sale'>('best')
 const saleProducts = computed(() => props.storefront.products.filter(product => product.original_price && product.original_price > product.price))
@@ -119,14 +124,28 @@ const dealProducts = computed(() => {
       </div>
     </section>
 
-    <section v-if="theme?.show_newsletter !== false" class="newsletter page-width">
-      <div><span>{{ theme?.newsletter_eyebrow || 'Novidades da loja' }}</span>
-        <h2>{{ theme?.newsletter_title || 'Cuide da sua rotina sem sair de casa.' }}</h2>
-        <p>{{ theme?.newsletter_text || `Receba ofertas e informações úteis da ${storefront.site.name}.` }}</p>
+    <section v-if="theme?.show_newsletter !== false && updatesProduct" class="store-updates page-width" aria-labelledby="store-updates-title">
+      <div class="updates-copy">
+        <span class="updates-label"><span aria-hidden="true"></span>{{ theme?.newsletter_eyebrow || 'Novidades da loja' }}</span>
+        <h2 id="store-updates-title">{{ theme?.newsletter_title || 'Cuide da sua rotina sem sair de casa.' }}</h2>
+        <p>Explore produtos da {{ storefront.site.name }} e encontre novas escolhas para a sua rotina.</p>
+        <NuxtLink class="updates-cta" to="/produtos">Explorar produtos <ArrowRight :size="19" aria-hidden="true" /></NuxtLink>
       </div>
-      <form @submit.prevent><label class="sr-only" for="retail-email">Seu melhor e-mail</label><input id="retail-email"
-          type="email" placeholder="Seu melhor e-mail"><button type="submit">{{ theme?.newsletter_button_label || 'Quero receber' }}</button></form>
-      <div class="newsletter-mark">+</div>
+
+      <div class="updates-display">
+        <span class="display-label">Uma escolha para conhecer</span>
+        <NuxtLink class="updates-product" :to="`/produto/${updatesProduct.slug}`">
+          <span class="updates-media">
+            <img v-if="productImage(updatesProduct)" :src="productImage(updatesProduct)!" alt="" loading="lazy" @error="usePlaceholder">
+            <ShoppingBag v-else :size="56" aria-hidden="true" />
+          </span>
+          <span class="updates-product-info">
+            <small>{{ updatesProduct.categories[0]?.name || 'Produtos da loja' }}</small>
+            <strong>{{ updatesProduct.name }}</strong>
+            <span class="updates-price">{{ updatesProduct.stock > 0 ? money(updatesProduct.price) : 'Indisponível' }} <ArrowRight :size="18" aria-hidden="true" /></span>
+          </span>
+        </NuxtLink>
+      </div>
     </section>
   </main>
 </template>
@@ -592,77 +611,173 @@ const dealProducts = computed(() => {
   line-height: 1.35
 }
 
-.newsletter {
-  position: relative;
+.store-updates {
   display: grid;
-  grid-template-columns: .85fr 1.15fr;
+  grid-template-columns: minmax(0, 1fr) minmax(310px, .85fr);
   align-items: center;
-  gap: 55px;
-  min-height: 230px;
+  gap: clamp(32px, 6vw, 92px);
+  min-height: 420px;
   margin-top: 78px;
-  overflow: hidden;
-  padding: 38px 55px;
-  border: 1px solid #e5e7eb;
-  border-radius: 18px;
-  background:
-    radial-gradient(circle at 86% 20%, rgba(255, 209, 164, .5), transparent 17rem),
-    #f8fafc;
-  box-shadow: 0 26px 70px rgba(15, 23, 42, .06)
-}
-
-.newsletter>div:first-child span {
-  color: var(--sf-primary);
-  font-size: 9px;
-  font-weight: 800
-}
-
-.newsletter h2 {
-  max-width: 440px;
-  margin: 6px 0;
-  font-size: clamp(32px, 4vw, 52px);
-  line-height: 1;
-  letter-spacing: -.04em
-}
-
-.newsletter p {
-  margin: 0;
-  color: #64748b;
-  font-size: 10px
-}
-
-.newsletter form {
-  position: relative;
-  z-index: 1;
-  display: grid;
-  grid-template-columns: 1fr auto;
-  height: 50px;
-  overflow: hidden;
-  border: 1px solid #dbe3ef;
-  border-radius: 7px;
+  padding: clamp(36px, 5vw, 68px) 0;
+  border-top: 1px solid #e2e8f0;
+  border-bottom: 1px solid #e2e8f0;
   background: #fff
 }
 
-.newsletter input {
-  min-width: 0;
-  padding: 0 16px;
-  border: 0;
-  outline: 0
+.updates-copy {
+  max-width: 610px
 }
 
-.newsletter button {
-  padding: 0 21px;
-  border: 0;
-  background: var(--sf-primary);
+.updates-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding-bottom: 8px;
+  border-bottom: 2px solid var(--sf-primary);
+  color: var(--sf-ink);
+  font-size: 14px;
+  font-weight: 700
+}
+
+.updates-label>span {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--sf-primary)
+}
+
+.updates-copy h2 {
+  max-width: 13ch;
+  margin: 24px 0 16px;
+  color: var(--sf-ink);
+  font-size: clamp(36px, 4.2vw, 58px);
+  font-weight: 800;
+  line-height: 1.08;
+  letter-spacing: -.045em;
+  text-wrap: balance
+}
+
+.updates-copy p {
+  max-width: 47ch;
+  margin: 0;
+  color: #475467;
+  font-size: 16px;
+  line-height: 1.65
+}
+
+.updates-cta {
+  display: inline-flex;
+  min-height: 48px;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 28px;
+  padding: 0 20px;
+  border-radius: 10px;
+  background: #172336;
   color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none
+}
+
+.updates-cta:hover {
+  background: #263b58
+}
+
+.updates-display {
+  min-width: 0;
+  padding: 18px;
+  border: 1px solid #e4e9ee;
+  border-radius: 18px;
+  background: #fff;
+  box-shadow: 0 20px 48px rgba(15, 23, 42, .08)
+}
+
+.display-label {
+  display: block;
+  margin: 2px 4px 14px;
+  color: #475467;
+  font-size: 13px;
+  font-weight: 700
+}
+
+.updates-product {
+  display: grid;
+  grid-template-columns: minmax(130px, .95fr) minmax(0, 1fr);
+  min-height: 222px;
+  overflow: hidden;
+  border-radius: 12px;
+  background: #f4f7fa;
+  color: var(--sf-ink);
+  text-decoration: none
+}
+
+.updates-media {
+  display: grid;
+  min-width: 0;
+  place-items: center;
+  padding: 20px;
+  color: #8b9aa9
+}
+
+.updates-media img {
+  display: block;
+  width: 100%;
+  max-height: 200px;
+  object-fit: contain
+}
+
+.updates-product-info {
+  display: flex;
+  min-width: 0;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: 8px;
+  padding: 20px 20px 20px 4px
+}
+
+.updates-product-info small {
+  color: var(--sf-primary);
+  font-size: 12px;
+  font-weight: 700
+}
+
+.updates-product-info strong {
+  display: -webkit-box;
+  overflow: hidden;
+  font-size: clamp(16px, 1.6vw, 20px);
+  font-weight: 750;
+  line-height: 1.35;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 3
+}
+
+.updates-product:hover .updates-product-info strong {
+  text-decoration: underline;
+  text-underline-offset: 3px
+}
+
+.updates-price {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 12px;
+  color: var(--sf-ink);
+  font-size: 18px;
   font-weight: 800
 }
 
-.newsletter-mark {
-  position: absolute;
-  right: 4%;
-  color: #dbeafe;
-  font-size: 180px;
-  font-weight: 200
+.updates-price svg {
+  color: var(--sf-primary)
+}
+
+.store-updates a:focus-visible {
+  outline: 3px solid var(--sf-primary);
+  outline-offset: 3px
 }
 
 @media(max-width:1000px) {
@@ -741,14 +856,9 @@ const dealProducts = computed(() => {
     flex-direction: column
   }
 
-  .newsletter {
+  .store-updates {
     grid-template-columns: 1fr;
-    gap: 25px;
-    padding: 34px 24px
-  }
-
-  .newsletter-mark {
-    display: none
+    gap: 32px
   }
 }
 
@@ -791,14 +901,35 @@ const dealProducts = computed(() => {
     border-left: 0
   }
 
-  .newsletter form {
-    grid-template-columns: 1fr;
-    height: auto
+  .store-updates {
+    margin-top: 56px;
+    padding: 34px 0
   }
 
-  .newsletter input,
-  .newsletter button {
-    height: 48px
+  .updates-copy h2 {
+    margin-top: 18px;
+    font-size: clamp(32px, 9vw, 42px)
+  }
+
+  .updates-display {
+    padding: 12px
+  }
+
+  .updates-product {
+    grid-template-columns: minmax(100px, .8fr) minmax(0, 1fr);
+    min-height: 188px
+  }
+
+  .updates-media {
+    padding: 12px
+  }
+
+  .updates-product-info {
+    padding: 14px 12px 14px 0
+  }
+
+  .updates-price {
+    font-size: 16px
   }
 }
 

@@ -113,8 +113,6 @@ const themeStyle = computed(() => ({
 :global(.base-shell .retail-product .product-price button){font-size:12px}
 :global(.base-shell .compact-products small){font-size:10px}
 :global(.base-shell .compact-products strong){font-size:13px}
-:global(.base-shell .newsletter h2){font-size:34px}
-:global(.base-shell .newsletter p){font-size:13px}
 :global(.base-shell .footer-benefits strong){font-size:12px}
 :global(.base-shell .footer-benefits small){font-size:10px}
 </style>
