@@ -1,6 +1,7 @@
 import type { StorefrontPayload } from '#shared/types/storefront'
 import type { StorefrontPage } from '~/utils/storefront-page'
 import { pageTitle } from '~/utils/storefront-page'
+import { blogArticlesForStore } from '~/data/blog'
 
 export function useStorefrontPage(page: StorefrontPage) {
   const requestUrl = useRequestURL()
@@ -37,6 +38,9 @@ export function useStorefrontPage(page: StorefrontPage) {
     }
     if (page.kind === 'category' && !storefront.categories.some(category => category.slug === page.slug)) {
       throw createError({ statusCode: 404, statusMessage: 'Página não encontrada', message: 'A categoria solicitada não existe nesta loja.' })
+    }
+    if (page.kind === 'blog-article' && !blogArticlesForStore(storefront).some(article => article.slug === page.slug)) {
+      throw createError({ statusCode: 404, statusMessage: 'Página não encontrada', message: 'A matéria solicitada não está disponível nesta loja.' })
     }
 
     return storefront

@@ -3,8 +3,8 @@ import { ArrowLeft, ArrowRight, Baby, Dumbbell, HeartPulse, House, Laptop, Layou
 import type { StorefrontPayload } from '#shared/types/storefront'
 import type { StorefrontBranding } from '#shared/types/branding'
 import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
+import { blogArticlesForStore } from '~/data/blog'
 import { productsInCategory } from '~/utils/category-products'
-import BaseEditorialSpotlight from './BaseEditorialSpotlight.vue'
 import BaseProductCard from './BaseProductCard.vue'
 
 const props = defineProps<{ storefront: StorefrontPayload, theme: StorefrontBranding }>()
@@ -19,7 +19,7 @@ const slideAnnouncement = ref('')
 let slideTimer: ReturnType<typeof setTimeout> | undefined
 let motion: typeof import('gsap')['gsap'] | undefined
 let motionPreference: MediaQueryList | undefined
-const { productImage, usePlaceholder, money } = useStorefrontCatalog()
+const { productImage, usePlaceholder } = useStorefrontCatalog()
 const activeCategories = computed(() => props.storefront.categories.filter(category => category.is_active))
 const heroImageUrl = computed(() => heroImageFailed.value ? null : props.theme.hero_image_url?.trim() || null)
 watch(() => props.theme.hero_image_url, () => { heroImageFailed.value = false })
@@ -146,11 +146,7 @@ function animateSlideLeave(element: Element, done: () => void) {
   if (!motion || reducedMotion.value) return done()
   motion.to(element, { opacity: 0, duration: .4, ease: 'power2.inOut', onComplete: done })
 }
-const updatesProduct = computed(() =>
-  props.storefront.products.find(item => !item.is_featured && item.stock > 0 && productImage(item))
-  || props.storefront.products.find(item => item.stock > 0 && productImage(item))
-  || props.storefront.products[0]
-)
+const homeBlogArticles = computed(() => blogArticlesForStore(props.storefront).slice(0, 3))
 const activeDealTab = ref<'best' | 'new' | 'sale'>('best')
 const saleProducts = computed(() => props.storefront.products.filter(product => product.original_price && product.original_price > product.price))
 const dealProducts = computed(() => {
@@ -230,8 +226,6 @@ onBeforeUnmount(() => {
       <div v-else class="empty-row">As categorias estão sendo organizadas.</div>
     </section>
 
-    <BaseEditorialSpotlight :storefront="storefront" />
-
     <section class="deals page-width">
       <div class="deals-heading">
         <h2>Deals of The Day</h2>
@@ -266,27 +260,22 @@ onBeforeUnmount(() => {
       </div>
     </section>
 
-    <section v-if="theme?.show_newsletter !== false && updatesProduct" class="store-updates page-width" aria-labelledby="store-updates-title">
-      <div class="updates-copy">
-        <span class="updates-label"><span aria-hidden="true"></span>{{ theme?.newsletter_eyebrow || 'Novidades da loja' }}</span>
-        <h2 id="store-updates-title">{{ theme?.newsletter_title || 'Cuide da sua rotina sem sair de casa.' }}</h2>
-        <p>Explore produtos da {{ storefront.site.name }} e encontre novas escolhas para a sua rotina.</p>
-        <NuxtLink class="updates-cta" to="/produtos">Explorar produtos <ArrowRight :size="19" aria-hidden="true" /></NuxtLink>
+    <section v-if="homeBlogArticles.length" class="home-blog page-width" aria-labelledby="home-blog-title">
+      <div class="home-blog-heading">
+        <div><span>Blog da loja</span><h2 id="home-blog-title">Ideias para descobrir com calma.</h2></div>
+        <NuxtLink to="/blog">Ver todas as matérias <ArrowRight :size="18" aria-hidden="true" /></NuxtLink>
       </div>
-
-      <div class="updates-display">
-        <span class="display-label">Uma escolha para conhecer</span>
-        <NuxtLink class="updates-product" :to="`/produto/${updatesProduct.slug}`">
-          <span class="updates-media">
-            <img v-if="productImage(updatesProduct)" :src="productImage(updatesProduct)!" alt="" loading="lazy" @error="usePlaceholder">
-            <ShoppingBag v-else :size="56" aria-hidden="true" />
-          </span>
-          <span class="updates-product-info">
-            <small>{{ updatesProduct.categories[0]?.name || 'Produtos da loja' }}</small>
-            <strong>{{ updatesProduct.name }}</strong>
-            <span class="updates-price">{{ updatesProduct.stock > 0 ? money(updatesProduct.price) : 'Indisponível' }} <ArrowRight :size="18" aria-hidden="true" /></span>
-          </span>
+      <div class="home-blog-grid" :class="{ 'home-blog-grid--single': homeBlogArticles.length === 1 }">
+        <NuxtLink class="home-blog-lead" :to="`/blog/${homeBlogArticles[0]!.slug}`">
+          <span class="home-blog-lead-image"><img :src="homeBlogArticles[0]!.image" :alt="homeBlogArticles[0]!.imageAlt" loading="lazy"></span>
+          <span class="home-blog-lead-content"><small>{{ homeBlogArticles[0]!.category }} · {{ homeBlogArticles[0]!.readingMinutes }} min de leitura</small><strong>{{ homeBlogArticles[0]!.title }}</strong><span>{{ homeBlogArticles[0]!.excerpt }}</span><span class="home-blog-read">Ler matéria <ArrowRight :size="18" aria-hidden="true" /></span></span>
         </NuxtLink>
+        <div v-if="homeBlogArticles.length > 1" class="home-blog-side">
+          <NuxtLink v-for="article in homeBlogArticles.slice(1)" :key="article.slug" :to="`/blog/${article.slug}`" class="home-blog-mini">
+            <span class="home-blog-mini-image"><img :src="article.image" :alt="article.imageAlt" loading="lazy"></span>
+            <span class="home-blog-mini-content"><small>{{ article.category }} · {{ article.readingMinutes }} min de leitura</small><strong>{{ article.title }}</strong><span>Continuar lendo <ArrowRight :size="16" aria-hidden="true" /></span></span>
+          </NuxtLink>
+        </div>
       </div>
     </section>
   </main>
@@ -805,174 +794,91 @@ onBeforeUnmount(() => {
   line-height: 1.35
 }
 
-.store-updates {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(310px, .85fr);
-  align-items: center;
-  gap: clamp(32px, 6vw, 92px);
-  min-height: 420px;
-  margin-top: 78px;
-  padding: clamp(36px, 5vw, 68px) 0;
-  border-top: 1px solid #e2e8f0;
-  border-bottom: 1px solid #e2e8f0;
-  background: #fff
+.home-blog {
+  margin-top: 84px;
+  padding-top: 54px;
+  border-top: 1px solid #e2e9ee;
 }
 
-.updates-copy {
-  max-width: 610px
+.home-blog-heading {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 28px;
+  margin-bottom: 27px;
 }
 
-.updates-label {
+.home-blog-heading span {
+  display: inline-block;
+  margin-bottom: 14px;
+  color: var(--sf-primary);
+  font-size: 13px;
+  font-weight: 750;
+}
+
+.home-blog-heading h2 {
+  max-width: 17ch;
+  margin: 0;
+  color: var(--sf-ink);
+  font-size: clamp(35px, 4vw, 54px);
+  font-weight: 740;
+  line-height: 1.08;
+  letter-spacing: -.05em;
+  text-wrap: balance;
+}
+
+.home-blog-heading > a {
   display: inline-flex;
+  min-height: 42px;
   align-items: center;
   gap: 10px;
-  padding-bottom: 8px;
-  border-bottom: 2px solid var(--sf-primary);
-  color: var(--sf-ink);
-  font-size: 14px;
-  font-weight: 700
-}
-
-.updates-label>span {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
-  background: var(--sf-primary)
-}
-
-.updates-copy h2 {
-  max-width: 13ch;
-  margin: 24px 0 16px;
-  color: var(--sf-ink);
-  font-size: clamp(36px, 4.2vw, 58px);
-  font-weight: 800;
-  line-height: 1.08;
-  letter-spacing: -.045em;
-  text-wrap: balance
-}
-
-.updates-copy p {
-  max-width: 47ch;
-  margin: 0;
-  color: #475467;
-  font-size: 16px;
-  line-height: 1.65
-}
-
-.updates-cta {
-  display: inline-flex;
-  min-height: 48px;
-  align-items: center;
-  justify-content: center;
-  gap: 16px;
-  margin-top: 28px;
-  padding: 0 20px;
-  border-radius: 10px;
-  background: #172336;
-  color: #fff;
-  font-size: 14px;
-  font-weight: 700;
-  text-decoration: none
-}
-
-.updates-cta:hover {
-  background: #263b58
-}
-
-.updates-display {
-  min-width: 0;
-  padding: 18px;
-  border: 1px solid #e4e9ee;
-  border-radius: 18px;
-  background: #fff;
-  box-shadow: 0 20px 48px rgba(15, 23, 42, .08)
-}
-
-.display-label {
-  display: block;
-  margin: 2px 4px 14px;
-  color: #475467;
-  font-size: 13px;
-  font-weight: 700
-}
-
-.updates-product {
-  display: grid;
-  grid-template-columns: minmax(130px, .95fr) minmax(0, 1fr);
-  min-height: 222px;
-  overflow: hidden;
-  border-radius: 12px;
-  background: #f4f7fa;
-  color: var(--sf-ink);
-  text-decoration: none
-}
-
-.updates-media {
-  display: grid;
-  min-width: 0;
-  place-items: center;
-  padding: 20px;
-  color: #8b9aa9
-}
-
-.updates-media img {
-  display: block;
-  width: 100%;
-  max-height: 200px;
-  object-fit: contain
-}
-
-.updates-product-info {
-  display: flex;
-  min-width: 0;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: 8px;
-  padding: 20px 20px 20px 4px
-}
-
-.updates-product-info small {
+  flex: none;
   color: var(--sf-primary);
-  font-size: 12px;
-  font-weight: 700
-}
-
-.updates-product-info strong {
-  display: -webkit-box;
-  overflow: hidden;
-  font-size: clamp(16px, 1.6vw, 20px);
+  font-size: 13px;
   font-weight: 750;
-  line-height: 1.35;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 3
+  text-decoration: none;
 }
 
-.updates-product:hover .updates-product-info strong {
-  text-decoration: underline;
-  text-underline-offset: 3px
+.home-blog-heading > a:hover { text-decoration: underline; text-underline-offset: 4px; }
+
+.home-blog-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.2fr) minmax(0, .8fr);
+  gap: 18px;
 }
 
-.updates-price {
-  display: flex;
-  width: 100%;
-  align-items: center;
-  justify-content: space-between;
-  gap: 12px;
-  margin-top: 12px;
+.home-blog-lead,
+.home-blog-mini {
+  min-width: 0;
+  background: #fff;
   color: var(--sf-ink);
-  font-size: 18px;
-  font-weight: 800
+  text-decoration: none;
 }
 
-.updates-price svg {
-  color: var(--sf-primary)
-}
-
-.store-updates a:focus-visible {
-  outline: 3px solid var(--sf-primary);
-  outline-offset: 3px
-}
+.home-blog-lead { display: flex; flex-direction: column; }
+.home-blog-lead-image { display: block; height: 290px; overflow: hidden; border-radius: 12px; }
+.home-blog-lead-image img,
+.home-blog-mini-image img { display: block; width: 100%; height: 100%; object-fit: cover; transition: transform .4s ease; }
+.home-blog-lead:hover img,
+.home-blog-mini:hover img { transform: scale(1.035); }
+.home-blog-lead-content { display: flex; flex: 1; flex-direction: column; align-items: flex-start; padding: 24px 4px 0; }
+.home-blog-lead-content small,
+.home-blog-mini-content small { color: #657184; font-size: 11px; font-weight: 680; }
+.home-blog-lead-content strong { max-width: 20ch; margin-top: 11px; font-size: clamp(27px, 2.5vw, 36px); font-weight: 730; line-height: 1.12; letter-spacing: -.04em; }
+.home-blog-lead-content > span:not(.home-blog-read) { max-width: 54ch; margin-top: 10px; color: #596a7d; font-size: 14px; line-height: 1.55; }
+.home-blog-read { display: inline-flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 19px; color: var(--sf-primary); font-size: 13px; font-weight: 750; }
+.home-blog-side { display: grid; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 18px; }
+.home-blog-mini { display: grid; grid-template-columns: minmax(0, .43fr) minmax(0, .57fr); min-height: 0; }
+.home-blog-mini:first-child { padding-bottom: 18px; border-bottom: 1px solid #e4e9ed; }
+.home-blog-mini-image { display: block; min-height: 0; overflow: hidden; border-radius: 10px; }
+.home-blog-mini-content { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 18px 0 18px 22px; }
+.home-blog-mini-content strong { max-width: 16ch; margin-top: 12px; font-size: clamp(20px, 2vw, 28px); font-weight: 720; line-height: 1.16; letter-spacing: -.035em; }
+.home-blog-mini-content > span { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; color: var(--sf-primary); font-size: 12px; font-weight: 750; }
+.home-blog-grid--single { grid-template-columns: 1fr; }
+.home-blog-grid--single .home-blog-lead { display: grid; grid-template-columns: 1fr 1fr; min-height: 340px; }
+.home-blog-grid--single .home-blog-lead-image { height: 100%; }
+.home-blog-grid--single .home-blog-lead-content { justify-content: center; padding: 42px; }
+.home-blog a:focus-visible { outline: 3px solid var(--sf-primary); outline-offset: 4px; }
 
 @media(max-width:1000px) {
   .product-grid {
@@ -1022,10 +928,7 @@ onBeforeUnmount(() => {
     flex-direction: column
   }
 
-  .store-updates {
-    grid-template-columns: 1fr;
-    gap: 32px
-  }
+
 }
 
 @media(max-width:520px) {
@@ -1054,36 +957,7 @@ onBeforeUnmount(() => {
     border-left: 0
   }
 
-  .store-updates {
-    margin-top: 56px;
-    padding: 34px 0
-  }
 
-  .updates-copy h2 {
-    margin-top: 18px;
-    font-size: clamp(32px, 9vw, 42px)
-  }
-
-  .updates-display {
-    padding: 12px
-  }
-
-  .updates-product {
-    grid-template-columns: minmax(100px, .8fr) minmax(0, 1fr);
-    min-height: 188px
-  }
-
-  .updates-media {
-    padding: 12px
-  }
-
-  .updates-product-info {
-    padding: 14px 12px 14px 0
-  }
-
-  .updates-price {
-    font-size: 16px
-  }
 }
 
 .product-list-enter-active,
@@ -1150,5 +1024,43 @@ onBeforeUnmount(() => {
 
 @media (prefers-reduced-motion: reduce) {
   .hero-cta, .hero-dots span, .category-card, .category-art img { transition: none; }
+}
+
+@media (max-width: 1000px) {
+  .home-blog-mini-content { padding: 17px; }
+  .home-blog-mini-content strong { font-size: 21px; }
+  .home-blog-mini-content > span { margin-top: 10px; }
+}
+
+@media (max-width: 760px) {
+  .home-blog { margin-top: 62px; padding-top: 38px; }
+  .home-blog-grid { grid-template-columns: 1fr; }
+  .home-blog-lead-image { height: 320px; }
+  .home-blog-side { grid-template-columns: repeat(2, minmax(0, 1fr)); grid-template-rows: auto; }
+  .home-blog-mini { display: flex; flex-direction: column; }
+  .home-blog-mini-image { aspect-ratio: 1.5; }
+  .home-blog-mini-content { flex: 1; padding: 18px 2px; }
+  .home-blog-grid--single .home-blog-lead { grid-template-columns: 1fr; }
+  .home-blog-grid--single .home-blog-lead-image { height: 320px; }
+  .home-blog-grid--single .home-blog-lead-content { padding: 26px; }
+}
+
+@media (max-width: 520px) {
+  .home-blog-heading { align-items: flex-start; flex-direction: column; gap: 13px; }
+  .home-blog-heading h2 { font-size: 37px; }
+  .home-blog-lead-image { height: 240px; }
+  .home-blog-lead-content { padding: 20px 2px 0; }
+  .home-blog-lead-content strong { font-size: 28px; }
+  .home-blog-side { grid-template-columns: 1fr; }
+  .home-blog-mini { display: grid; grid-template-columns: 42% 58%; min-height: 160px; }
+  .home-blog-mini-image { aspect-ratio: auto; }
+  .home-blog-mini-content { padding: 14px; }
+  .home-blog-mini-content strong { font-size: 19px; }
+  .home-blog-mini-content > span { font-size: 11px; }
+  .home-blog-grid--single .home-blog-lead-image { height: 240px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .home-blog-lead-image img, .home-blog-mini-image img { transition: none; }
 }
 </style>

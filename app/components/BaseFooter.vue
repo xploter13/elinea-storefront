@@ -9,6 +9,7 @@ const footerGroups = [
     { label: 'Página inicial', to: '/' },
     { label: 'Todos os produtos', to: '/produtos' },
     { label: 'Categorias', to: '/categorias' },
+    { label: 'Blog', to: '/blog' },
     { label: 'Carrinho', to: '/carrinho' },
   ] },
   { title: 'Sua conta', links: [

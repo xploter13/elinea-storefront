@@ -1,9 +1,12 @@
 import type { StorefrontPayload } from '#shared/types/storefront'
+import { blogArticles } from '~/data/blog'
 
 export type StorefrontPage =
   | { kind: 'home' }
   | { kind: 'products' }
   | { kind: 'categories' }
+  | { kind: 'blog' }
+  | { kind: 'blog-article', slug: string }
   | { kind: 'category', slug: string }
   | { kind: 'product', slug: string }
   | { kind: 'cart' }
@@ -20,6 +23,7 @@ export function resolveStorefrontPage(path: string): StorefrontPage {
   if (!segments.length) return { kind: 'home' }
   if (segments.length === 1 && segments[0] === 'produtos') return { kind: 'products' }
   if (segments.length === 1 && segments[0] === 'categorias') return { kind: 'categories' }
+  if (segments.length === 1 && segments[0] === 'blog') return { kind: 'blog' }
   if (segments.length === 1 && segments[0] === 'carrinho') return { kind: 'cart' }
   if (segments.length === 1 && segments[0] === 'checkout') return { kind: 'checkout' }
   if (segments.length === 1 && segments[0] === 'login') return { kind: 'login' }
@@ -38,6 +42,7 @@ export function resolveStorefrontPage(path: string): StorefrontPage {
   }
   if (segments.length === 2 && segments[0] === 'produto' && segments[1]) return { kind: 'product', slug: segments[1] }
   if (segments.length === 2 && segments[0] === 'categoria' && segments[1]) return { kind: 'category', slug: segments[1] }
+  if (segments.length === 2 && segments[0] === 'blog' && segments[1]) return { kind: 'blog-article', slug: segments[1] }
   return { kind: 'not-found' }
 }
 
@@ -46,6 +51,8 @@ export function pageTitle(page: StorefrontPage, storefront: StorefrontPayload): 
   if (page.kind === 'category') return storefront.categories.find(category => category.slug === page.slug)?.name || 'Categoria não encontrada'
   if (page.kind === 'products') return 'Produtos'
   if (page.kind === 'categories') return 'Categorias'
+  if (page.kind === 'blog') return 'Blog'
+  if (page.kind === 'blog-article') return blogArticles.find(article => article.slug === page.slug)?.title || 'Matéria não encontrada'
   if (page.kind === 'cart') return 'Carrinho'
   if (page.kind === 'checkout') return 'Finalizar compra'
   if (page.kind === 'login') return 'Entrar na conta'
