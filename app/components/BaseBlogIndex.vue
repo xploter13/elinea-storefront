@@ -24,7 +24,7 @@ const moreArticles = computed(() => articles.value.slice(1))
         <p>Ideias e guias para encontrar o que faz sentido na sua rotina. Uma boa descoberta merece tempo.</p>
       </header>
 
-      <section class="featured-story" aria-labelledby="featured-story-title">
+      <section v-if="featured" class="featured-story" aria-labelledby="featured-story-title">
         <NuxtLink class="featured-image" :to="`/blog/${featured.slug}`" :aria-label="`Ler ${featured.title}`">
           <img :src="featured.image" :alt="featured.imageAlt" fetchpriority="high" loading="eager">
         </NuxtLink>
@@ -36,6 +36,7 @@ const moreArticles = computed(() => articles.value.slice(1))
         </div>
       </section>
 
+      <p v-if="!articles.length" class="empty-blog" role="status">{{ storefront.blog.unavailable ? 'Não foi possível carregar as matérias. Tente novamente em instantes.' : 'Novas leituras estão a caminho. Volte em breve para descobrir as próximas matérias.' }}</p>
       <section v-if="moreArticles.length" class="more-stories" aria-labelledby="more-stories-title">
         <div class="section-heading"><h2 id="more-stories-title">Outras leituras</h2><p>Novas ideias para explorar</p></div>
         <div class="story-grid">
@@ -51,12 +52,19 @@ const moreArticles = computed(() => articles.value.slice(1))
         </div>
       </section>
 
+      <nav v-if="storefront.blog.lastPage > 1" class="blog-pagination" aria-label="Paginação de matérias">
+        <NuxtLink v-if="storefront.blog.currentPage > 1" :to="{ path: '/blog', query: { page: storefront.blog.currentPage - 1 } }">Anterior</NuxtLink>
+        <span>Página {{ storefront.blog.currentPage }} de {{ storefront.blog.lastPage }}</span>
+        <NuxtLink v-if="storefront.blog.currentPage < storefront.blog.lastPage" :to="{ path: '/blog', query: { page: storefront.blog.currentPage + 1 } }">Próxima</NuxtLink>
+      </nav>
       <div class="blog-endnote"><span>Continue a descoberta na loja.</span><NuxtLink to="/produtos">Explorar produtos <ArrowRight :size="18" aria-hidden="true" /></NuxtLink></div>
     </div>
   </main>
 </template>
 
 <style scoped>
+.empty-blog{padding:40px 0;color:#526173;line-height:1.6}
+.blog-pagination{display:flex;flex-wrap:wrap;justify-content:center;gap:24px;margin-top:48px}.blog-pagination a{color:var(--sf-primary);font-weight:700}
 .blog-page{color:var(--sf-ink);background:#fff}
 .blog-wrap{width:min(100% - 40px,1320px);margin-inline:auto}
 .breadcrumb{display:flex;align-items:center;gap:9px;padding-top:30px;color:#667487;font-size:13px}

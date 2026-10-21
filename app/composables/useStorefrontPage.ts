@@ -6,9 +6,13 @@ import { blogArticlesForStore } from '~/data/blog'
 export function useStorefrontPage(page: StorefrontPage) {
   const requestUrl = useRequestURL()
   const requestHeaders = import.meta.server ? useRequestHeaders(['host', 'x-forwarded-host']) : undefined
+  const route = useRoute()
+  const blogPage = page.kind === 'blog' ? Math.max(1, Number(route.query.page) || 1) : 1
+  const blogSlug = page.kind === 'blog-article' ? page.slug : undefined
   const request = useFetch<StorefrontPayload>('/api/storefront', {
     headers: requestHeaders,
-    key: `storefront:${requestUrl.hostname}`,
+    key: `storefront:${requestUrl.hostname}:${blogPage}:${blogSlug ?? ''}`,
+    query: { blog_page: blogPage, blog_slug: blogSlug },
   })
 
   const { data, error } = request

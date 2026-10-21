@@ -31,12 +31,17 @@ export default defineEventHandler(async (event): Promise<StorefrontPayload> => {
     })
   }
 
-  const [productsResult, categoriesResult, analyticsResult, newsletterResult, shippingProvidersResult] = await Promise.allSettled([
+  const query = getQuery(event)
+  const blogPage = Math.max(1, Math.floor(Number(query.blog_page) || 1))
+  const blogSlug = typeof query.blog_slug === 'string' ? query.blog_slug : undefined
+  const [productsResult, categoriesResult, analyticsResult, newsletterResult, shippingProvidersResult, blogResult, articleResult] = await Promise.allSettled([
     elinea.catalog.products.list({ perPage: 100 }),
     elinea.catalog.categories.list({ perPage: 100 }),
     elinea.analytics.get(),
     elinea.marketing.newsletterPopup.get(),
     elinea.checkout.shippingProviders(),
+    elinea.blog.list({ page: blogPage, perPage: 10 }),
+    blogSlug ? elinea.blog.get(blogSlug) : Promise.resolve(null),
   ])
   const warnings: string[] = []
   if (productsResult.status === 'rejected') warnings.push(warningFor('products', productsResult.reason))
@@ -45,7 +50,20 @@ export default defineEventHandler(async (event): Promise<StorefrontPayload> => {
   if (newsletterResult.status === 'rejected') warnings.push(warningFor('newsletter', newsletterResult.reason))
   if (shippingProvidersResult.status === 'rejected') warnings.push(warningFor('shipping_providers', shippingProvidersResult.reason))
 
+  if (blogResult.status === 'rejected') warnings.push(warningFor('blog', blogResult.reason))
+  if (blogSlug && articleResult.status === 'rejected' && !(articleResult.reason instanceof ElineaError && articleResult.reason.status === 404)) {
+    throw createError({ statusCode: 502, statusMessage: 'Blog indisponível', message: 'Não foi possível carregar a matéria. Tente novamente.' })
+  }
+  const articles = blogResult.status === 'fulfilled' ? blogResult.value.data : []
+  if (articleResult.status === 'fulfilled' && articleResult.value && !articles.some((article: { slug: string }) => article.slug === blogSlug)) articles.push(articleResult.value)
   return {
+    blog: {
+      articles,
+      currentPage: blogResult.status === 'fulfilled' ? blogResult.value.meta?.current_page ?? 1 : 1,
+      lastPage: blogResult.status === 'fulfilled' ? blogResult.value.meta?.last_page ?? 1 : 1,
+      total: blogResult.status === 'fulfilled' ? blogResult.value.meta?.total ?? articles.length : 0,
+      unavailable: blogResult.status === 'rejected',
+    },
     site,
     theme,
     products: productsResult.status === 'fulfilled' ? productsResult.value.data.map(toLegacyProduct) : [],

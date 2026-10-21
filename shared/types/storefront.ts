@@ -60,6 +60,7 @@ export interface AnalyticsConfiguration {
 }
 
 export interface StorefrontPayload {
+  blog: { articles: import('@elinea/sdk').BlogArticle[]; currentPage: number; lastPage: number; total: number; unavailable: boolean }
   site: StoreSite
   theme: import('./branding').StorefrontBranding
   products: StoreProduct[]

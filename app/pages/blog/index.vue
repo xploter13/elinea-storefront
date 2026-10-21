@@ -1,4 +1,5 @@
 <script setup lang="ts">
+definePageMeta({ key: route => route.fullPath })
 import BaseBlogIndex from '~/components/BaseBlogIndex.vue'
 import BaseTemplate from '~/components/BaseTemplate.vue'
 import type { StorefrontPage } from '~/utils/storefront-page'

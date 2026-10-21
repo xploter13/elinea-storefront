@@ -1,5 +1,4 @@
 import type { StorefrontPayload } from '#shared/types/storefront'
-import { blogArticles } from '~/data/blog'
 
 export type StorefrontPage =
   | { kind: 'home' }
@@ -52,7 +51,7 @@ export function pageTitle(page: StorefrontPage, storefront: StorefrontPayload): 
   if (page.kind === 'products') return 'Produtos'
   if (page.kind === 'categories') return 'Categorias'
   if (page.kind === 'blog') return 'Blog'
-  if (page.kind === 'blog-article') return blogArticles.find(article => article.slug === page.slug)?.title || 'Matéria não encontrada'
+  if (page.kind === 'blog-article') return storefront.blog.articles.find(article => article.slug === page.slug)?.title || 'Matéria não encontrada'
   if (page.kind === 'cart') return 'Carrinho'
   if (page.kind === 'checkout') return 'Finalizar compra'
   if (page.kind === 'login') return 'Entrar na conta'

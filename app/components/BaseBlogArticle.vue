@@ -93,7 +93,7 @@ onBeforeUnmount(() => {
               <p v-for="paragraph in section.paragraphs" :key="paragraph">{{ paragraph }}</p>
               <div v-if="section.points?.length" class="takeaways"><strong>Para levar com você</strong><ul><li v-for="point in section.points" :key="point">{{ point }}</li></ul></div>
             </section>
-            <blockquote v-if="index === 1">{{ article.quote }}</blockquote>
+            <blockquote v-if="article.quote && (index === 1 || article.sections.length === 1)">{{ article.quote }}</blockquote>
           </template>
           <div class="article-close"><p>Gostou da leitura? Continue explorando ideias e encontre a próxima descoberta para o seu dia.</p><NuxtLink to="/produtos">Explorar produtos <ArrowRight :size="18" aria-hidden="true" /></NuxtLink></div>
         </article>
