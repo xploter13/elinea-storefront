@@ -66,17 +66,108 @@ watch(() => props.product, () => {
 })
 const shareProduct = async () => { if (import.meta.client && navigator.share) { await navigator.share({ title: props.product.name, url: window.location.href }).catch(() => undefined); return }; if (import.meta.client && navigator.clipboard) { await navigator.clipboard.writeText(window.location.href); copied.value = true; window.setTimeout(() => { copied.value = false }, 1800) } }
 const addProductToCart = () => addToCart(props.product, quantity.value)
+
+const galleryColumn = ref<HTMLElement | null>(null)
+const galleryElement = ref<HTMLElement | null>(null)
+const summaryElement = ref<HTMLElement | null>(null)
+let revertGalleryPin: (() => void) | undefined
+let refreshGalleryPin: (() => void) | undefined
+let galleryUnmounted = false
+
+onMounted(async () => {
+  const [{ gsap }, { ScrollTrigger }] = await Promise.all([
+    import('gsap'),
+    import('gsap/ScrollTrigger'),
+  ])
+  if (galleryUnmounted) return
+
+  gsap.registerPlugin(ScrollTrigger)
+  const media = gsap.matchMedia()
+  revertGalleryPin = () => media.revert()
+
+  media.add('(min-width: 781px) and (prefers-reduced-motion: no-preference)', () => {
+    const column = galleryColumn.value
+    const gallery = galleryElement.value
+    const summary = summaryElement.value
+    if (!column || !gallery || !summary) return
+
+    const header = document.querySelector<HTMLElement>('.store-header')
+    const headerOffset = () => Math.ceil(header?.getBoundingClientRect().height ?? 0) + 24
+    const updateGalleryHeight = () => {
+      column.style.setProperty('--product-gallery-max-height', `${Math.max(120, window.innerHeight - headerOffset() - 24)}px`)
+    }
+    let pin: ReturnType<typeof ScrollTrigger.create> | undefined
+    let frame = 0
+    let disposed = false
+    const refreshPin = () => {
+      cancelAnimationFrame(frame)
+      frame = requestAnimationFrame(() => {
+        if (disposed) return
+        updateGalleryHeight()
+        const needsPin = summary.offsetHeight > gallery.offsetHeight + 1
+        if (!needsPin) {
+          pin?.kill()
+          pin = undefined
+          return
+        }
+        if (!pin) {
+          pin = ScrollTrigger.create({
+            trigger: column,
+            start: () => `top top+=${headerOffset()}`,
+            endTrigger: summary,
+            end: () => `bottom top+=${headerOffset() + gallery.offsetHeight}`,
+            pin: gallery,
+            pinSpacing: false,
+            anticipatePin: 1,
+            invalidateOnRefresh: true,
+            onRefreshInit: updateGalleryHeight,
+          })
+        } else {
+          pin.refresh()
+        }
+      })
+    }
+    const observer = new ResizeObserver(refreshPin)
+    observer.observe(summary)
+    if (header) observer.observe(header)
+    window.addEventListener('resize', refreshPin)
+    refreshGalleryPin = refreshPin
+    refreshPin()
+
+    return () => {
+      disposed = true
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+      window.removeEventListener('resize', refreshPin)
+      pin?.kill()
+      column.style.removeProperty('--product-gallery-max-height')
+      refreshGalleryPin = undefined
+    }
+  })
+})
+
+watch([() => props.product.id, () => images.value.length], async () => {
+  await nextTick()
+  refreshGalleryPin?.()
+})
+
+onBeforeUnmount(() => {
+  galleryUnmounted = true
+  revertGalleryPin?.()
+})
 </script>
 
 <template>
   <main class="product-detail-page">
     <nav class="product-breadcrumb" aria-label="Navegação estrutural"><NuxtLink to="/">Início</NuxtLink><ArrowRight :size="14" /><NuxtLink to="/produtos">Produtos</NuxtLink><ArrowRight :size="14" /><span>{{ product.categories[0]?.name || 'Produto' }}</span><ArrowRight :size="14" /><strong>{{ product.name }}</strong></nav>
     <div class="product-detail-grid">
-      <section class="product-gallery" :class="{ 'single-image': images.length <= 1 }" aria-label="Galeria do produto">
+      <div ref="galleryColumn" class="product-gallery-column">
+      <section ref="galleryElement" class="product-gallery" :class="{ 'single-image': images.length <= 1 }" aria-label="Galeria do produto">
         <div v-if="images.length > 1" class="gallery-thumbs"><button v-for="(image, index) in images" :key="image" type="button" class="gallery-thumb" :class="{ active: selectedImage === index }" :aria-label="`Ver imagem ${index + 1}`" @click="selectedImage = index"><img :src="image" :alt="`${product.name} - imagem ${index + 1}`" @error="usePlaceholder"></button></div>
         <div class="gallery-stage"><div class="stage-badges"><span v-if="hasSale" class="stage-badge sale">-{{ discount(displayedProduct) }}%</span><span v-if="product.is_featured" class="stage-badge featured">Destaque</span></div><img :src="currentImage" :alt="product.name" @error="usePlaceholder"><button v-if="images.length > 1" type="button" class="gallery-arrow previous" aria-label="Imagem anterior" @click="selectedImage = (selectedImage - 1 + images.length) % images.length"><ArrowLeft :size="19" /></button><button v-if="images.length > 1" type="button" class="gallery-arrow next" aria-label="Próxima imagem" @click="selectedImage = (selectedImage + 1) % images.length"><ArrowRight :size="19" /></button><span v-if="images.length > 1" class="gallery-count">{{ selectedImage + 1 }} / {{ images.length }}</span></div>
       </section>
-      <section class="product-summary">
+      </div>
+      <section ref="summaryElement" class="product-summary">
         <div class="summary-kicker"><span>{{ product.categories[0]?.name || 'Coleção Elínea' }}</span><span class="availability"><Check :size="13" /> {{ stockLabel }}</span></div>
         <h1>{{ product.name }}</h1><p class="summary-excerpt">{{ product.excerpt || product.description || 'Uma escolha selecionada para tornar sua rotina mais simples, prática e confiável.' }}</p>
         <div class="summary-meta">
@@ -120,5 +211,11 @@ const addProductToCart = () => addToCart(props.product, quantity.value)
   .gallery-stage{box-sizing:border-box;width:100%;max-width:100%;min-width:0;height:auto;min-height:0;aspect-ratio:1 / 1}
   .gallery-stage>img,.product-gallery.single-image .gallery-stage>img{box-sizing:border-box;width:100%;height:100%;max-width:100%;max-height:100%;min-height:0;padding:12px;object-fit:contain;transform:none}
   .gallery-thumbs{min-width:0;max-width:100%;overscroll-behavior-x:contain}
+}
+.product-gallery-column{min-width:0;align-self:stretch}
+@media(min-width:781px){
+  .product-detail-grid{align-items:start}
+  .gallery-stage{height:min(clamp(480px,42vw,620px),var(--product-gallery-max-height,620px))}
+  .gallery-thumbs{max-height:var(--product-gallery-max-height,620px);overflow-y:auto;scrollbar-width:thin}
 }
 </style>
