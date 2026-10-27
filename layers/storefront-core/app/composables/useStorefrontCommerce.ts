@@ -13,6 +13,7 @@ function emptyCart(): StoreCart {
 
 export const useStorefrontCommerce = (storefront: StorefrontPayload) => {
   const namespace = storefront.site.slug
+  const canPurchase = computed(() => storefront.site.online_checkout_enabled !== false)
   const cart = useState<StoreCart>(`commerce:cart:${namespace}`, emptyCart)
   const initialized = useState<boolean>(`commerce:initialized:${namespace}`, () => false)
   const cartOpen = useState<boolean>(`commerce:cart-open:${namespace}`, () => false)
@@ -62,7 +63,7 @@ export const useStorefrontCommerce = (storefront: StorefrontPayload) => {
 
   const initialize = async () => {
     hydrateWishlist()
-    if (!import.meta.client || initialized.value) return
+    if (!canPurchase.value || !import.meta.client || initialized.value) return
     try {
       const response = await $fetch<ApiEnvelope<StoreCart>>('/api/cart', { headers: headers() })
       cart.value = response.data
@@ -79,7 +80,7 @@ export const useStorefrontCommerce = (storefront: StorefrontPayload) => {
   }
 
   const addToCart = async (product: StoreProduct, quantity = 1) => {
-    if (product.stock < 1 || busyProducts.value.includes(product.id)) return
+    if (!canPurchase.value || product.stock < 1 || busyProducts.value.includes(product.id)) return
     setBusy(product.id, true)
     try {
       const response = await $fetch<ApiEnvelope<StoreCart>>('/api/cart/items', {
@@ -153,9 +154,12 @@ export const useStorefrontCommerce = (storefront: StorefrontPayload) => {
 
   return {
     cart,
+    canPurchase,
     cartProducts,
     wishlist,
     wishlistProducts,
+    wishlistHydrated,
+    hydrateWishlist,
     cartOpen,
     wishlistOpen,
     busyProducts,

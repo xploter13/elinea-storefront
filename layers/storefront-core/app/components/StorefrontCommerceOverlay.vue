@@ -10,7 +10,7 @@ const {
   productImage,
 } = useStorefrontCatalog(props.storefront)
 const {
-  cart, cartProducts, wishlistProducts, cartOpen, wishlistOpen, busyProducts, notice,
+  cart, canPurchase, cartProducts, wishlistProducts, cartOpen, wishlistOpen, busyProducts, notice,
   initialize, addToCart, updateQuantity, removeFromCart, toggleWishlist,
 } = useStorefrontCommerce(props.storefront)
 
@@ -63,7 +63,7 @@ onBeforeUnmount(() => {
 
 <template>
   <Transition name="cart-drawer">
-    <div v-if="cartOpen" class="commerce-drawer" role="dialog" aria-modal="true" aria-label="Seu carrinho" @keydown="handleCartKeydown">
+    <div v-if="canPurchase && cartOpen" class="commerce-drawer" role="dialog" aria-modal="true" aria-label="Seu carrinho" @keydown="handleCartKeydown">
       <button class="cart-backdrop" type="button" tabindex="-1" aria-label="Fechar carrinho" @click="closeCart"></button>
       <aside ref="cartPanel" class="commerce-panel">
         <header class="cart-header">
@@ -108,7 +108,7 @@ onBeforeUnmount(() => {
       <div v-if="wishlistProducts.length" class="mt-6 grid gap-3 sm:grid-cols-2">
         <article v-for="product in wishlistProducts" :key="product.id" class="card card-side border border-base-300 bg-base-100">
           <figure class="m-3 size-24 shrink-0 rounded-box bg-base-200"><img v-if="productImage(product)" :src="productImage(product)!" :alt="product.name" class="size-full object-contain"><ShoppingBag v-else :size="25" class="opacity-35"/></figure>
-          <div class="card-body min-w-0 gap-2 p-4 pl-1"><NuxtLink :to="`/produto/${product.slug}`" class="line-clamp-2 text-sm font-bold" @click="wishlistOpen=false">{{ product.name }}</NuxtLink><strong class="text-primary">{{ money(product.price) }}</strong><div class="card-actions mt-auto"><button class="btn btn-primary btn-sm" :disabled="product.stock<1 || busyProducts.includes(product.id)" @click="addToCart(product)">Adicionar</button><button class="btn btn-ghost btn-sm text-error" @click="toggleWishlist(product)">Remover</button></div></div>
+          <div class="card-body min-w-0 gap-2 p-4 pl-1"><NuxtLink :to="`/produto/${product.slug}`" class="line-clamp-2 text-sm font-bold" @click="wishlistOpen=false">{{ product.name }}</NuxtLink><strong class="text-primary">{{ money(product.price) }}</strong><div class="card-actions mt-auto"><button v-if="canPurchase" class="btn btn-primary btn-sm" :disabled="product.stock<1 || busyProducts.includes(product.id)" @click="addToCart(product)">Adicionar</button><button class="btn btn-ghost btn-sm text-error" @click="toggleWishlist(product)">Remover</button></div></div>
         </article>
       </div>
       <div v-else class="alert mt-6"><Heart :size="20"/><span>Sua lista ainda está vazia. Use o coração nos produtos para guardar seus favoritos.</span></div>

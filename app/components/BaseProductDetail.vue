@@ -6,6 +6,7 @@ import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/
 import { useStorefrontCommerce } from '~~/layers/storefront-core/app/composables/useStorefrontCommerce'
 import BaseProductCard from './BaseProductCard.vue'
 import BaseShippingEstimate from './BaseShippingEstimate.vue'
+import BaseWhatsAppButton from './BaseWhatsAppButton.vue'
 
 const props = defineProps<{ product: StoreProduct, storefront: StorefrontPayload }>()
 const requestHeaders = import.meta.server ? useRequestHeaders(['cookie']) : undefined
@@ -15,13 +16,19 @@ const { data: session } = await useFetch<{ customer: Customer }>('/api/auth/me',
   ignoreResponseError: true,
 })
 const isAuthenticated = computed(() => Boolean(session.value?.customer))
+const requestUrl = useRequestURL()
 const quantity = ref(1)
 const selectedImage = ref(0)
 const activeTab = ref<'description' | 'specification'>('description')
 const selectedVariation = ref<ProductVariation | null>(null)
 const copied = ref(false)
+const whatsappMessage = computed(() => [
+  `Olá! Tenho interesse no produto ${props.product.name}.`,
+  selectedVariation.value ? `Opção: ${selectedVariation.value.name || selectedVariation.value.sku}` : '',
+  new URL(`/produto/${encodeURIComponent(props.product.slug)}`, requestUrl.origin).href,
+].filter(Boolean).join('\n'))
 const { money, productImage, usePlaceholder, discount } = useStorefrontCatalog(props.storefront)
-const { addToCart, toggleWishlist, isWishlisted, busyProducts } = useStorefrontCommerce(props.storefront)
+const { addToCart, canPurchase, toggleWishlist, isWishlisted, busyProducts } = useStorefrontCommerce(props.storefront)
 
 const wished = computed(() => isWishlisted(props.product.id))
 const busy = computed(() => busyProducts.value.includes(props.product.id))
@@ -76,18 +83,19 @@ const addProductToCart = () => addToCart(props.product, quantity.value)
           <span class="product-sku">SKU: <strong>{{ product.sku }}</strong></span>
         </div>
         <div class="price-row" aria-live="polite"><div><s v-if="hasSale">{{ money(displayedProduct.original_price!) }}</s><strong>{{ money(displayedProduct.price) }}</strong><small>à vista</small></div><span v-if="hasSale" class="save-pill">Economize {{ discount(displayedProduct) }}%</span></div>
-        <div v-if="!isAuthenticated" class="register-promo"><div class="promo-mark">✦</div><div><strong>Sua conta nesta loja</strong><span>Crie uma conta para acompanhar pedidos e manter seus endereços salvos.</span></div><NuxtLink to="/cadastro">Cadastrar <ArrowRight :size="15" /></NuxtLink></div>
-        <BaseShippingEstimate v-if="shippingProvider" :product-id="product.id" :quantity="quantity" :provider="shippingProvider" :site-slug="storefront.site.slug" />
+        <div v-if="canPurchase && !isAuthenticated" class="register-promo"><div class="promo-mark">✦</div><div><strong>Sua conta nesta loja</strong><span>Crie uma conta para acompanhar pedidos e manter seus endereços salvos.</span></div><NuxtLink to="/cadastro">Cadastrar <ArrowRight :size="15" /></NuxtLink></div>
+        <BaseShippingEstimate v-if="canPurchase && shippingProvider" :product-id="product.id" :quantity="quantity" :provider="shippingProvider" :site-slug="storefront.site.slug" />
         <div v-if="variationChoices.length" class="variation-group"><div class="variation-heading"><strong>Opções</strong><span>{{ selectedVariation?.name || 'Selecione uma opção' }}</span></div><div class="variation-list"><button v-for="variation in variationChoices" :key="variation.sku" type="button" class="variation-button" :class="{ selected: selectedVariation?.sku === variation.sku, unavailable: variation.stock < 1 }" :aria-pressed="selectedVariation?.sku === variation.sku" :disabled="variation.stock < 1" @click="selectVariation(variation)">{{ variation.name || Object.values(variation.attributes).join(' / ') }}<Check v-if="selectedVariation?.sku === variation.sku" :size="14" /></button></div></div>
-        <div class="purchase-row"><div class="quantity-control" aria-label="Quantidade"><button type="button" aria-label="Diminuir quantidade" @click="changeQuantity(quantity - 1)"><Minus :size="17" /></button><span>{{ String(quantity).padStart(2, '0') }}</span><button type="button" aria-label="Aumentar quantidade" @click="changeQuantity(quantity + 1)"><Plus :size="17" /></button></div><button class="primary-buy" type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart"><span v-if="busy" class="loading loading-spinner loading-sm"></span><ShoppingCart v-else :size="18" />{{ product.stock < 1 ? 'Produto indisponível' : 'Adicionar ao carrinho' }}</button><button class="wishlist-button" :class="{ active: wished }" type="button" :aria-label="wished ? 'Remover da lista de desejos' : 'Adicionar à lista de desejos'" :aria-pressed="wished" @click="toggleWishlist(product)"><Heart :size="19" :fill="wished ? 'currentColor' : 'none'" /></button></div>
-        <button class="buy-now" type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart">Comprar agora</button>
+        <div v-if="canPurchase" class="purchase-row"><div class="quantity-control" aria-label="Quantidade"><button type="button" aria-label="Diminuir quantidade" @click="changeQuantity(quantity - 1)"><Minus :size="17" /></button><span>{{ String(quantity).padStart(2, '0') }}</span><button type="button" aria-label="Aumentar quantidade" @click="changeQuantity(quantity + 1)"><Plus :size="17" /></button></div><button class="primary-buy" type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart"><span v-if="busy" class="loading loading-spinner loading-sm"></span><ShoppingCart v-else :size="18" />{{ product.stock < 1 ? 'Produto indisponível' : 'Adicionar ao carrinho' }}</button><button class="wishlist-button" :class="{ active: wished }" type="button" :aria-label="wished ? 'Remover da lista de desejos' : 'Adicionar à lista de desejos'" :aria-pressed="wished" @click="toggleWishlist(product)"><Heart :size="19" :fill="wished ? 'currentColor' : 'none'" /></button></div>
+        <button v-if="canPurchase" class="buy-now" type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart">Comprar agora</button>
+        <BaseWhatsAppButton :phone="storefront.theme.contact_phone" variant="inline" :message="whatsappMessage" />
         <div class="action-links"><button type="button" @click="shareProduct"><Copy v-if="copied" :size="16" /><Share2 v-else :size="16" />{{ copied ? 'Link copiado' : 'Compartilhar' }}</button><button type="button" @click="toggleWishlist(product)"><Heart :size="16" :fill="wished ? 'currentColor' : 'none'" />{{ wished ? 'Salvo na lista' : 'Adicionar à lista' }}</button></div>
-        <div class="service-grid"><div><Truck :size="20" /><span><strong>Entrega para sua região</strong><small>Consulte o prazo no carrinho</small></span></div><div><ShieldCheck :size="20" /><span><strong>Compra protegida</strong><small>Pagamento seguro e suporte</small></span></div><div><RotateCcw :size="20" /><span><strong>Compra tranquila</strong><small>Atendimento para sua jornada</small></span></div></div>
+        <div v-if="canPurchase" class="service-grid"><div><Truck :size="20" /><span><strong>Entrega para sua região</strong><small>Consulte o prazo no carrinho</small></span></div><div><ShieldCheck :size="20" /><span><strong>Compra protegida</strong><small>Pagamento seguro e suporte</small></span></div><div><RotateCcw :size="20" /><span><strong>Compra tranquila</strong><small>Atendimento para sua jornada</small></span></div></div>
       </section>
     </div>
     <section class="product-lower-grid"><div class="product-tabs-panel"><div class="product-tabs" role="tablist"><button type="button" :class="{ active: activeTab === 'description' }" @click="activeTab = 'description'">Descrição</button><button type="button" :class="{ active: activeTab === 'specification' }" @click="activeTab = 'specification'">Especificações</button><button type="button" disabled>Avaliações</button><button type="button" disabled>Dúvidas</button></div><div v-if="activeTab === 'description'" class="tab-content"><h2>Sobre este produto</h2><p>{{ product.description || product.excerpt || 'Este produto foi selecionado para oferecer uma experiência de compra clara e confiável.' }}</p><p v-if="product.excerpt && product.description">{{ product.excerpt }}</p><div class="content-highlight"><PackageCheck :size="22" /><span><strong>Escolha verificada pela Elínea</strong><small>Informações de estoque e preço atualizadas para esta loja.</small></span></div></div><div v-else class="tab-content"><h2>Informações do produto</h2><dl class="specification-list"><div v-for="row in specificationRows" :key="row[0]"><dt>{{ row[0] }}</dt><dd>{{ row[1] }}</dd></div></dl></div></div><aside class="viewed-panel"><div class="panel-tabs"><strong>Recomendados</strong><span>Para você</span></div><NuxtLink v-for="item in recentlyViewed" :key="item.id" :to="`/produto/${item.slug}`" class="mini-product"><div class="mini-image"><img v-if="productImage(item)" :src="productImage(item)!" :alt="item.name" @error="usePlaceholder"><Eye :size="14" /></div><div><strong>{{ item.name }}</strong><span><s v-if="item.original_price && item.original_price > item.price">{{ money(item.original_price) }}</s> {{ money(item.price) }}</span></div></NuxtLink></aside></section>
     <section v-if="recommended.length" class="frequent-section"><div class="frequent-heading"><div><span>Curadoria Elínea</span><h2>Você também pode gostar</h2></div><p>Complete sua próxima compra com produtos selecionados para você.</p></div><div class="frequent-list"><BaseProductCard v-for="item in recommended" :key="item.id" :product="item" :storefront="storefront" /></div></section>
-    <div class="mobile-buy-bar"><div><small>{{ quantity }} item{{ quantity === 1 ? '' : 's' }}</small><strong>{{ money(displayedProduct.price * quantity) }}</strong></div><button type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart"><ShoppingCart :size="17" /> Adicionar</button></div>
+    <div v-if="canPurchase" class="mobile-buy-bar"><div><small>{{ quantity }} item{{ quantity === 1 ? '' : 's' }}</small><strong>{{ money(displayedProduct.price * quantity) }}</strong></div><button type="button" :disabled="product.stock < 1 || busy" @click="addProductToCart"><ShoppingCart :size="17" /> Adicionar</button></div>
   </main>
 </template>
 

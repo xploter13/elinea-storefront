@@ -1,8 +1,9 @@
 <script setup lang="ts">
 import { ArrowRight, Phone } from '@lucide/vue'
 import type { StorefrontBranding } from '#shared/types/branding'
+import BaseWhatsAppButton from './BaseWhatsAppButton.vue'
 
-const props = defineProps<{ storeName: string, theme: StorefrontBranding }>()
+const props = defineProps<{ storeName: string, theme: StorefrontBranding, catalogOnly?: boolean }>()
 
 const footerGroups = [
   { title: 'Explore a loja', links: [
@@ -14,6 +15,7 @@ const footerGroups = [
   ] },
   { title: 'Sua conta', links: [
     { label: 'Minha conta', to: '/conta' },
+    { label: 'Meus favoritos', to: '/favoritos' },
     { label: 'Meus pedidos', to: '/conta/pedidos' },
     { label: 'Meus endereços', to: '/conta/enderecos' },
   ] },
@@ -56,15 +58,16 @@ const phoneHref = computed(() => {
 
         <nav v-for="group in footerGroups" :key="group.title" class="footer-links" :aria-label="group.title">
           <h3>{{ group.title }}</h3>
-          <NuxtLink v-for="link in group.links" :key="link.to" :to="link.to">{{ link.label }}</NuxtLink>
+          <NuxtLink v-for="link in group.links.filter(link => !catalogOnly || link.to !== '/carrinho')" :key="link.to" :to="link.to">{{ link.label }}</NuxtLink>
         </nav>
       </div>
 
       <div class="footer-base">
-        <p>© {{ new Date().getFullYear() }} {{ storeName }}. Todos os direitos reservados.</p>
+        <div class="footer-credits"><p>© {{ new Date().getFullYear() }} {{ storeName }}. Todos os direitos reservados.</p><p class="developer-credit">Desenvolvido por <strong>Elínea</strong></p></div>
         <NuxtLink to="/">Voltar à página inicial <ArrowRight :size="15" aria-hidden="true" /></NuxtLink>
       </div>
     </div>
+    <BaseWhatsAppButton :phone="theme.contact_phone" />
   </footer>
 </template>
 
@@ -94,7 +97,7 @@ const phoneHref = computed(() => {
 .footer-links a{display:inline-flex;min-height:40px;align-items:center;color:#536174;font-size:14px;line-height:1.5;text-decoration:none;text-underline-offset:4px}
 .footer-links a:hover,.footer-base a:hover,.contact-phone:hover{text-decoration:underline;color:var(--sf-primary)}
 .footer-base{display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid #e2e8f0;padding:23px 0 28px;color:#64748b;font-size:14px}
-.footer-base p{margin:0}.footer-base a{display:inline-flex;min-height:44px;align-items:center;gap:8px;color:#536174;font-weight:650;text-decoration:none}
+.footer-credits{display:grid;gap:6px}.footer-base p{margin:0}.footer-base .developer-credit{font-size:14px;color:#64748b}.developer-credit strong{color:#172033;font-weight:700}.footer-base a{display:inline-flex;min-height:44px;align-items:center;gap:8px;color:#536174;font-weight:650;text-decoration:none}
 .retail-footer a:focus-visible{outline:3px solid var(--sf-primary);outline-offset:4px}
 @media(max-width:960px){.footer-content{grid-template-columns:repeat(3,minmax(0,1fr));gap:42px 24px}.footer-brand{grid-column:1/-1}}
 @media(max-width:640px){.retail-footer{margin-top:56px}.footer-container{width:min(100% - 32px,1320px)}.footer-help{display:grid;gap:20px;margin-top:24px;padding:24px}.footer-help h2{font-size:23px}.help-link{justify-self:start}.footer-content{grid-template-columns:repeat(2,minmax(0,1fr));gap:36px 20px;padding:42px 0}.footer-brand{grid-column:1/-1}.footer-links:last-child{grid-column:1/-1}.footer-links a{min-height:44px}.footer-base{align-items:flex-start;flex-direction:column;padding:22px 0 28px}}

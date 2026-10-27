@@ -7,6 +7,7 @@ import BaseFooter from './BaseFooter.vue'
 import BaseHeader from './BaseHeader.vue'
 import StorefrontCommerceOverlay from '~~/layers/storefront-core/app/components/StorefrontCommerceOverlay.vue'
 import BaseCart from './BaseCart.vue'
+import BaseFavorites from './BaseFavorites.vue'
 import BaseCategories from './BaseCategories.vue'
 import BaseHome from './BaseHome.vue'
 import BaseProductDetail from './BaseProductDetail.vue'
@@ -58,9 +59,10 @@ const themeStyle = computed(() => ({
     <BaseCategories v-else-if="page.kind === 'categories'" :storefront="storefront" />
     <BaseProducts v-else-if="page.kind === 'category' && category" :storefront="storefront" :products="categoryProducts" :title="category.name" :description="category.description || undefined" />
     <BaseProductDetail v-else-if="page.kind === 'product' && product" :product="product" :storefront="storefront" />
+    <BaseFavorites v-else-if="page.kind === 'favorites'" :storefront="storefront" />
     <BaseCart v-else-if="page.kind === 'cart'" :storefront="storefront" />
     <slot v-else-if="page.kind === 'login' || page.kind === 'register' || page.kind === 'password-reset' || page.kind === 'information' || page.kind === 'blog' || page.kind === 'blog-article'" />
-    <BaseFooter :store-name="storefront.site.name" :theme="theme" />
+    <BaseFooter :catalog-only="storefront.site.online_checkout_enabled === false" :store-name="storefront.site.name" :theme="theme" />
     <BaseCookieConsent />
     <StorefrontCommerceOverlay :storefront="storefront" />
   </div>

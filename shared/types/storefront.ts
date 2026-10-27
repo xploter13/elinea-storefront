@@ -7,6 +7,7 @@ export interface StoreSite {
   domain: string | null
   segment: string
   plan_id: number | null
+  online_checkout_enabled?: boolean
   status: string
   billing_status: string | null
   billing_ends_at: string | null

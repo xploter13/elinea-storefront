@@ -8,6 +8,7 @@ export type StorefrontPage =
   | { kind: 'blog-article', slug: string }
   | { kind: 'category', slug: string }
   | { kind: 'product', slug: string }
+  | { kind: 'favorites' }
   | { kind: 'cart' }
   | { kind: 'checkout' }
   | { kind: 'login' }
@@ -23,6 +24,7 @@ export function resolveStorefrontPage(path: string): StorefrontPage {
   if (segments.length === 1 && segments[0] === 'produtos') return { kind: 'products' }
   if (segments.length === 1 && segments[0] === 'categorias') return { kind: 'categories' }
   if (segments.length === 1 && segments[0] === 'blog') return { kind: 'blog' }
+  if (segments.length === 1 && segments[0] === 'favoritos') return { kind: 'favorites' }
   if (segments.length === 1 && segments[0] === 'carrinho') return { kind: 'cart' }
   if (segments.length === 1 && segments[0] === 'checkout') return { kind: 'checkout' }
   if (segments.length === 1 && segments[0] === 'login') return { kind: 'login' }
@@ -52,6 +54,7 @@ export function pageTitle(page: StorefrontPage, storefront: StorefrontPayload): 
   if (page.kind === 'categories') return 'Categorias'
   if (page.kind === 'blog') return 'Blog'
   if (page.kind === 'blog-article') return storefront.blog.articles.find(article => article.slug === page.slug)?.title || 'Matéria não encontrada'
+  if (page.kind === 'favorites') return 'Favoritos'
   if (page.kind === 'cart') return 'Carrinho'
   if (page.kind === 'checkout') return 'Finalizar compra'
   if (page.kind === 'login') return 'Entrar na conta'

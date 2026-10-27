@@ -1,6 +1,6 @@
 # Mapa de páginas, componentes e textos em pt-BR
 
-Revisão realizada em 27/10/2026: 22 páginas, 22 componentes em `app/components`
+Revisão realizada em 27/10/2026: 23 páginas, 23 componentes em `app/components`
 e 4 componentes em `layers/storefront-core/app/components`.
 
 ## Páginas
@@ -15,6 +15,7 @@ para carregar os dados da loja e definir títulos e metadados em português.
 | `/categorias` | `categorias.vue` | `BaseTemplate` → `BaseCategories`; navegação e busca de categorias |
 | `/categoria/:slug` | `categoria/[slug].vue` | `BaseTemplate` → `BaseProducts`; produtos da categoria |
 | `/produto/:slug` | `produto/[slug].vue` | `BaseTemplate` → `BaseProductDetail`; detalhes e compra do produto |
+| `/favoritos` | `favoritos.vue` | `BaseTemplate` → `BaseFavorites`; produtos salvos, compra e remoção de favoritos |
 | `/carrinho` | `carrinho.vue` | `BaseCart`; itens, quantidades e resumo |
 | `/checkout` | `checkout.vue` | `BaseCheckout`; contato, entrega e confirmação |
 | `/pagamento/:id` | `pagamento/[id].vue` | `BasePayment`; seleção de pagamento e consulta do pedido |
@@ -52,6 +53,7 @@ Todos os arquivos desta tabela ficam em `app/components`.
 | `BaseProductCard.vue` | Cartão reutilizado nas vitrines e no catálogo | Selo de mais vendido e botão de compra traduzidos |
 | `BaseProductDetail.vue` | Galeria, variações, compra e descrição | Textos já em português |
 | `BaseShippingEstimate.vue` | Consulta de frete do produto | Textos já em português |
+| `BaseFavorites.vue` | Produtos favoritos, carregamento e lista vazia | Textos em português; usa a lista salva no navegador |
 | `BaseCart.vue` | Carrinho e resumo da compra | Textos já em português |
 | `BaseCheckout.vue` | Etapas da finalização da compra | Textos já em português |
 | `BasePayment.vue` | Pedido, provedores e confirmação de pagamento | Mensagem de abertura da página de pagamento traduzida |

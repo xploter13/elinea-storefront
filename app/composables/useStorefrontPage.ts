@@ -4,6 +4,7 @@ import { pageTitle } from '~/utils/storefront-page'
 import { blogArticlesForStore } from '~/data/blog'
 
 export function useStorefrontPage(page: StorefrontPage) {
+  const nuxtApp = useNuxtApp()
   const requestUrl = useRequestURL()
   const requestHeaders = import.meta.server ? useRequestHeaders(['host', 'x-forwarded-host']) : undefined
   const route = useRoute()
@@ -27,7 +28,7 @@ export function useStorefrontPage(page: StorefrontPage) {
       : [],
   })
 
-  return request.then(({ data: resolvedData, error: resolvedError }) => {
+  return request.then(async ({ data: resolvedData, error: resolvedError }) => {
     if (resolvedError.value || !resolvedData.value) {
       throw createError({
         statusCode: resolvedError.value?.statusCode || 502,
@@ -37,6 +38,9 @@ export function useStorefrontPage(page: StorefrontPage) {
     }
 
     const storefront = resolvedData.value
+    if (storefront.site.online_checkout_enabled === false && (page.kind === 'cart' || page.kind === 'checkout')) {
+      await nuxtApp.runWithContext(() => navigateTo('/produtos', { replace: true }))
+    }
     if (page.kind === 'product' && !storefront.products.some(product => product.slug === page.slug)) {
       throw createError({ statusCode: 404, statusMessage: 'Página não encontrada', message: 'O produto solicitado não existe nesta loja.' })
     }
