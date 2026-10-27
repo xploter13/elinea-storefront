@@ -101,22 +101,22 @@ const money = (value: number) => new Intl.NumberFormat('pt-BR', { style: 'curren
 .shipping-estimate{margin:22px 0;padding:20px;border:1px solid #e1e6ee;border-radius:14px;background:#f8fafc}
 .shipping-heading{display:flex;align-items:flex-start;gap:11px;color:var(--sf-primary)}
 .shipping-heading h2{margin:0;color:var(--sf-ink);font-size:16px;font-weight:750}
-.shipping-heading p{margin:4px 0 0;color:#667085;font-size:13px}
+.shipping-heading p{margin:4px 0 0;color:#667085;font-size:14px}
 .shipping-form{margin-top:18px}
-.shipping-form label{display:block;margin-bottom:8px;color:var(--sf-ink);font-size:13px;font-weight:650}
+.shipping-form label{display:block;margin-bottom:8px;color:var(--sf-ink);font-size:14px;font-weight:650}
 .shipping-controls{display:flex;gap:9px}
 .shipping-controls input{width:100%;min-width:0;height:44px;padding:0 13px;border:1px solid #cbd5e1;border-radius:9px;background:#fff;color:var(--sf-ink);font-size:16px;outline:none}
 .shipping-controls input:focus-visible{border-color:var(--sf-primary);box-shadow:0 0 0 3px color-mix(in srgb,var(--sf-primary) 18%,transparent)}
 .shipping-controls input[aria-invalid="true"]{border-color:#b42318}
-.shipping-controls button{min-width:112px;min-height:44px;padding:0 16px;border:0;border-radius:9px;background:var(--sf-primary);color:#fff;font-size:13px;font-weight:700;cursor:pointer}
+.shipping-controls button{min-width:112px;min-height:44px;padding:0 16px;border:0;border-radius:9px;background:var(--sf-primary);color:#fff;font-size:14px;font-weight:700;cursor:pointer}
 .shipping-controls button:focus-visible{outline:3px solid var(--sf-ink);outline-offset:2px}
 .shipping-controls button:disabled{cursor:wait;opacity:.65}
-.shipping-error{margin:10px 0 0;color:#b42318;font-size:13px}
-.shipping-status{margin:12px 0 0;color:#667085;font-size:13px}
+.shipping-error{margin:10px 0 0;color:#b42318;font-size:14px}
+.shipping-status{margin:12px 0 0;color:#667085;font-size:14px}
 .shipping-options{display:grid;gap:0;margin:14px 0 0;padding:0;list-style:none;border-top:1px solid #e1e6ee}
 .shipping-options li{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 0;border-bottom:1px solid #e1e6ee;font-size:14px}
 .shipping-options li span{display:grid;gap:3px}
-.shipping-options li small{color:#667085;font-size:12px}
+.shipping-options li small{color:#667085;font-size:14px}
 .shipping-options li>strong{white-space:nowrap;color:var(--sf-ink)}
 @media(max-width:520px){.shipping-estimate{padding:16px}.shipping-controls button{min-width:98px;padding:0 12px}}
 </style>

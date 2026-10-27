@@ -105,7 +105,7 @@ async function submit() {
 .login-page:before{position:absolute;top:-260px;left:-180px;width:650px;height:650px;border-radius:50%;background:color-mix(in srgb,var(--account-primary) 7%,transparent);content:"";pointer-events:none}
 .login-layout{position:relative;display:grid;grid-template-columns:minmax(0,1.08fr) minmax(360px,.92fr);align-items:center;gap:clamp(48px,8vw,128px);width:min(100% - 48px,1180px);min-height:610px;margin:auto;padding:clamp(56px,7vw,104px) 0}
 .account-intro{max-width:570px}
-.eyebrow{display:inline-flex;align-items:center;gap:10px;color:var(--account-primary);font-size:12px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
+.eyebrow{display:inline-flex;align-items:center;gap:10px;color:var(--account-primary);font-size:14px;font-weight:800;letter-spacing:.12em;text-transform:uppercase}
 .eyebrow-line{display:inline-block;width:24px;height:2px;background:var(--account-primary)}
 .account-intro h1{max-width:560px;margin:22px 0 18px;font-size:clamp(36px,4.5vw,58px);font-weight:750;line-height:1.09;letter-spacing:-.045em;text-wrap:balance}
 .intro-lead{max-width:510px;margin:0;color:#475569;font-size:17px;line-height:1.7}
@@ -129,20 +129,20 @@ input{width:100%;min-height:52px;border:1px solid #cbd5e1;border-radius:11px;bac
 input::placeholder{color:#94a3b8}
 input:focus{border-color:var(--account-primary);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--account-primary) 16%,transparent)}
 .password-label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-top:12px}
-.password-label a,.two-factor-actions button{color:var(--account-primary);font:700 13px var(--account-font);text-decoration:none}
+.password-label a,.two-factor-actions button{color:var(--account-primary);font:700 14px var(--account-font);text-decoration:none}
 .password-label a:hover,.two-factor-actions button:hover{text-decoration:underline}
 .two-factor-actions{display:flex;flex-wrap:wrap;justify-content:space-between;gap:12px;margin-top:8px}
 .two-factor-actions button{border:0;background:none;padding:0;cursor:pointer}
 .submit{display:flex;min-height:52px;align-items:center;justify-content:center;gap:10px;margin-top:16px;border:0;border-radius:11px;background:var(--account-primary);color:#fff;font-family:inherit;font-size:15px;font-weight:700;cursor:pointer;transition:transform .2s,opacity .2s}
 .submit:hover:not(:disabled){transform:translateY(-2px)}
 .submit:disabled{cursor:wait;opacity:.65}
-.login-footnote{display:flex;align-items:center;gap:8px;margin:24px 0 0;border-top:1px solid #e9edf3;padding-top:20px;color:#64748b;font-size:12px}
+.login-footnote{display:flex;align-items:center;gap:8px;margin:24px 0 0;border-top:1px solid #e9edf3;padding-top:20px;color:#64748b;font-size:14px}
 .login-footnote svg{flex:none;color:var(--account-primary)}
-.browse-note{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:22px;color:#64748b;font-size:13px}
+.browse-note{display:flex;flex-wrap:wrap;justify-content:center;gap:5px;margin-top:22px;color:#64748b;font-size:14px}
 .browse-note a{display:inline-flex;align-items:center;gap:4px;color:var(--account-primary);font-weight:700;text-decoration:none}
 .browse-note a:hover{text-decoration:underline}
 .error{margin:8px 0 0;border-radius:10px;background:#fef2f2;padding:12px;color:#991b1b;font-size:14px}
 .login-page :is(a,button,input):focus-visible{outline:3px solid var(--account-primary);outline-offset:3px}
 @media(max-width:860px){.login-layout{grid-template-columns:1fr;gap:48px;max-width:620px;padding:56px 0}.account-intro h1{font-size:clamp(34px,7vw,48px)}.benefit-list{grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}.benefit{display:block}.benefit-icon{margin-bottom:12px}.support-note{margin-top:28px}}
-@media(max-width:620px){.login-layout{width:min(100% - 32px,520px);gap:36px;padding:40px 0}.account-intro h1{margin:16px 0 12px;font-size:34px}.intro-lead{font-size:15px}.benefit-list{grid-template-columns:1fr;gap:16px;margin-top:28px}.benefit{display:flex;gap:12px}.benefit-icon{width:40px;height:40px;margin:0}.benefit h2{font-size:14px}.benefit p{font-size:13px}.support-note{margin-top:24px;padding-top:18px;font-size:13px}.login-card{padding:26px 22px}.login-card h2{font-size:27px}}
+@media(max-width:620px){.login-layout{width:min(100% - 32px,520px);gap:36px;padding:40px 0}.account-intro h1{margin:16px 0 12px;font-size:34px}.intro-lead{font-size:15px}.benefit-list{grid-template-columns:1fr;gap:16px;margin-top:28px}.benefit{display:flex;gap:12px}.benefit-icon{width:40px;height:40px;margin:0}.benefit h2{font-size:14px}.benefit p{font-size:14px}.support-note{margin-top:24px;padding-top:18px;font-size:14px}.login-card{padding:26px 22px}.login-card h2{font-size:27px}}
 </style>

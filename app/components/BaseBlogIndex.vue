@@ -67,7 +67,7 @@ const moreArticles = computed(() => articles.value.slice(1))
 .blog-pagination{display:flex;flex-wrap:wrap;justify-content:center;gap:24px;margin-top:48px}.blog-pagination a{color:var(--sf-primary);font-weight:700}
 .blog-page{color:var(--sf-ink);background:#fff}
 .blog-wrap{width:min(100% - 40px,1320px);margin-inline:auto}
-.breadcrumb{display:flex;align-items:center;gap:9px;padding-top:30px;color:#667487;font-size:13px}
+.breadcrumb{display:flex;align-items:center;gap:9px;padding-top:30px;color:#667487;font-size:14px}
 .breadcrumb a{color:inherit;text-decoration:none}.breadcrumb a:hover{color:var(--sf-primary)}
 .page-intro{display:flex;align-items:end;justify-content:space-between;gap:40px;padding:60px 0 56px}
 .intro-label{display:inline-block;margin-bottom:20px;color:var(--sf-primary);font-size:14px;font-weight:750}
@@ -78,7 +78,7 @@ const moreArticles = computed(() => articles.value.slice(1))
 .featured-image img{position:absolute;inset:0;display:block;width:100%;height:100%;object-fit:cover;transition:transform .45s ease}
 .featured-image:hover img{transform:scale(1.035)}
 .featured-content{display:flex;flex-direction:column;align-items:flex-start;justify-content:center;padding:clamp(36px,5vw,76px)}
-.story-meta{display:inline-flex;align-items:center;flex-wrap:wrap;gap:11px;color:#526173;font-size:12px;font-weight:650}
+.story-meta{display:inline-flex;align-items:center;flex-wrap:wrap;gap:11px;color:#526173;font-size:14px;font-weight:650}
 .story-meta>span:first-child{color:var(--sf-primary)}
 .meta-divider{width:3px;height:3px;border-radius:50%;background:#8390a0}
 .featured-content h2{max-width:13ch;margin:25px 0 17px;font-size:clamp(37px,4vw,58px);font-weight:720;line-height:1.08;letter-spacing:-.05em;text-wrap:balance}
@@ -99,7 +99,7 @@ const moreArticles = computed(() => articles.value.slice(1))
 .story-card-content{padding:23px 1px 0}
 .story-card h3{max-width:22ch;margin:15px 0 10px;font-size:clamp(23px,2.2vw,31px);font-weight:720;line-height:1.16;letter-spacing:-.04em;text-wrap:balance}
 .blog-page .story-card p{max-width:43ch;margin:0;color:#607084;font-size:14px;line-height:1.6}
-.card-link{display:inline-flex;min-height:40px;align-items:center;gap:9px;margin-top:15px;color:var(--sf-primary);font-size:13px;font-weight:750;text-decoration:none}
+.card-link{display:inline-flex;min-height:40px;align-items:center;gap:9px;margin-top:15px;color:var(--sf-primary);font-size:14px;font-weight:750;text-decoration:none}
 .card-link:hover{text-decoration:underline;text-underline-offset:4px}
 .blog-endnote{display:flex;align-items:center;justify-content:space-between;gap:20px;margin-top:86px;padding:28px 0;border-top:1px solid #e5ebef;color:#536174;font-size:15px}
 .blog-endnote a{display:inline-flex;align-items:center;gap:10px;color:var(--sf-primary);font-weight:750;text-decoration:none}

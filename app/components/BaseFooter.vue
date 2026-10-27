@@ -87,13 +87,13 @@ const phoneHref = computed(() => {
 .footer-brand>p{max-width:320px;margin:18px 0 0;color:#536174;font-size:14px;line-height:1.65}
 .contact-phone{display:inline-flex;min-height:44px;align-items:center;gap:11px;margin-top:22px;color:#172033;text-decoration:none}
 .contact-phone svg{flex:none;color:var(--sf-primary)}
-.contact-phone span{display:grid;gap:2px}.contact-phone small{color:#64748b;font-size:12px}.contact-phone strong{font-size:17px;font-weight:750}
-.footer-brand .service-hours{margin:4px 0 0 30px;color:#64748b;font-size:12px}
+.contact-phone span{display:grid;gap:2px}.contact-phone small{color:#64748b;font-size:14px}.contact-phone strong{font-size:17px;font-weight:750}
+.footer-brand .service-hours{margin:4px 0 0 30px;color:#64748b;font-size:14px}
 .footer-links{display:flex;flex-direction:column;align-items:flex-start;gap:2px}
 .footer-links h3{margin:0 0 7px;color:#172033;font-size:15px;font-weight:750}
 .footer-links a{display:inline-flex;min-height:40px;align-items:center;color:#536174;font-size:14px;line-height:1.5;text-decoration:none;text-underline-offset:4px}
 .footer-links a:hover,.footer-base a:hover,.contact-phone:hover{text-decoration:underline;color:var(--sf-primary)}
-.footer-base{display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid #e2e8f0;padding:23px 0 28px;color:#64748b;font-size:13px}
+.footer-base{display:flex;align-items:center;justify-content:space-between;gap:20px;border-top:1px solid #e2e8f0;padding:23px 0 28px;color:#64748b;font-size:14px}
 .footer-base p{margin:0}.footer-base a{display:inline-flex;min-height:44px;align-items:center;gap:8px;color:#536174;font-weight:650;text-decoration:none}
 .retail-footer a:focus-visible{outline:3px solid var(--sf-primary);outline-offset:4px}
 @media(max-width:960px){.footer-content{grid-template-columns:repeat(3,minmax(0,1fr));gap:42px 24px}.footer-brand{grid-column:1/-1}}

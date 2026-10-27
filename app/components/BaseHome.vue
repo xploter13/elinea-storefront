@@ -228,12 +228,12 @@ onBeforeUnmount(() => {
 
     <section class="deals page-width">
       <div class="deals-heading">
-        <h2>Deals of The Day</h2>
+        <h2>Ofertas do dia</h2>
         <nav aria-label="Vitrines de produtos">
-          <button type="button" :class="{ active: activeDealTab === 'best' }" @click="activeDealTab = 'best'">Best Sellers</button>
-          <button type="button" :class="{ active: activeDealTab === 'new' }" @click="activeDealTab = 'new'">New Arrivals</button>
-          <button type="button" :class="{ active: activeDealTab === 'sale' }" @click="activeDealTab = 'sale'">On Sale</button>
-          <NuxtLink to="/produtos">View All</NuxtLink>
+          <button type="button" :class="{ active: activeDealTab === 'best' }" @click="activeDealTab = 'best'">Mais vendidos</button>
+          <button type="button" :class="{ active: activeDealTab === 'new' }" @click="activeDealTab = 'new'">Novidades</button>
+          <button type="button" :class="{ active: activeDealTab === 'sale' }" @click="activeDealTab = 'sale'">Em promoção</button>
+          <NuxtLink to="/produtos">Ver todos</NuxtLink>
         </nav>
       </div>
       <TransitionGroup v-if="dealProducts.length" name="product-list" tag="div" class="product-grid deals-grid">
@@ -337,7 +337,7 @@ onBeforeUnmount(() => {
   display: inline-flex;
   align-items: center;
   gap: 11px;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 700;
   letter-spacing: .12em;
   text-transform: uppercase;
@@ -382,7 +382,7 @@ onBeforeUnmount(() => {
   align-items: center;
   justify-content: center;
   gap: 13px;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 750;
   text-decoration: none;
 }
@@ -500,7 +500,7 @@ onBeforeUnmount(() => {
   align-items: center;
   gap: 6px;
   color: var(--sf-primary);
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 750;
   text-decoration: none;
 }
@@ -709,7 +709,7 @@ onBeforeUnmount(() => {
   border-radius: 999px;
   background: transparent;
   color: #7a7f87;
-  font-size: 12px;
+  font-size: 14px;
   font-weight: 650;
   text-decoration: none;
   cursor: pointer
@@ -812,7 +812,7 @@ onBeforeUnmount(() => {
   display: inline-block;
   margin-bottom: 14px;
   color: var(--sf-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 750;
 }
 
@@ -834,7 +834,7 @@ onBeforeUnmount(() => {
   gap: 10px;
   flex: none;
   color: var(--sf-primary);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 750;
   text-decoration: none;
 }
@@ -863,17 +863,17 @@ onBeforeUnmount(() => {
 .home-blog-mini:hover img { transform: scale(1.035); }
 .home-blog-lead-content { display: flex; flex: 1; flex-direction: column; align-items: flex-start; padding: 24px 4px 0; }
 .home-blog-lead-content small,
-.home-blog-mini-content small { color: #657184; font-size: 11px; font-weight: 680; }
+.home-blog-mini-content small { color: #657184; font-size: 14px; font-weight: 680; }
 .home-blog-lead-content strong { max-width: 20ch; margin-top: 11px; font-size: clamp(27px, 2.5vw, 36px); font-weight: 730; line-height: 1.12; letter-spacing: -.04em; }
 .home-blog-lead-content > span:not(.home-blog-read) { max-width: 54ch; margin-top: 10px; color: #596a7d; font-size: 14px; line-height: 1.55; }
-.home-blog-read { display: inline-flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 19px; color: var(--sf-primary); font-size: 13px; font-weight: 750; }
+.home-blog-read { display: inline-flex; align-items: center; gap: 10px; margin-top: auto; padding-top: 19px; color: var(--sf-primary); font-size: 14px; font-weight: 750; }
 .home-blog-side { display: grid; grid-template-rows: repeat(2, minmax(0, 1fr)); gap: 18px; }
 .home-blog-mini { display: grid; grid-template-columns: minmax(0, .43fr) minmax(0, .57fr); min-height: 0; }
 .home-blog-mini:first-child { padding-bottom: 18px; border-bottom: 1px solid #e4e9ed; }
 .home-blog-mini-image { display: block; min-height: 0; overflow: hidden; border-radius: 10px; }
 .home-blog-mini-content { display: flex; flex-direction: column; align-items: flex-start; justify-content: center; padding: 18px 0 18px 22px; }
 .home-blog-mini-content strong { max-width: 16ch; margin-top: 12px; font-size: clamp(20px, 2vw, 28px); font-weight: 720; line-height: 1.16; letter-spacing: -.035em; }
-.home-blog-mini-content > span { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; color: var(--sf-primary); font-size: 12px; font-weight: 750; }
+.home-blog-mini-content > span { display: inline-flex; align-items: center; gap: 8px; margin-top: 16px; color: var(--sf-primary); font-size: 14px; font-weight: 750; }
 .home-blog-grid--single { grid-template-columns: 1fr; }
 .home-blog-grid--single .home-blog-lead { display: grid; grid-template-columns: 1fr 1fr; min-height: 340px; }
 .home-blog-grid--single .home-blog-lead-image { height: 100%; }
@@ -1010,7 +1010,7 @@ onBeforeUnmount(() => {
   .hero-copy h1 { max-width: 11ch; margin: 21px 0 16px; font-size: clamp(40px, 10vw, 51px); }
   .hero-copy p { max-width: 34ch; font-size: 14px; }
   .hero-actions { gap: 8px 16px; margin-top: 25px; }
-  .hero-actions a { min-height: 43px; font-size: 12px; }
+  .hero-actions a { min-height: 43px; font-size: 14px; }
   .hero-cta { padding-inline: 12px; }
   .hero-controls { right: 12px; bottom: 12px; }
   .categories { padding-top: 31px; }
@@ -1018,7 +1018,7 @@ onBeforeUnmount(() => {
   .category-card { min-height: 178px; flex-basis: 142px; padding: 10px 8px 13px; }
   .category-art { height: 105px; margin-bottom: 7px; }
   .category-art img { width: 95px; height: 95px; }
-  .category-name { font-size: 12px; }
+  .category-name { font-size: 14px; }
   .category-card small { font-size: 10px; }
 }
 

@@ -31,7 +31,7 @@ export function useStorefrontPage(page: StorefrontPage) {
     if (resolvedError.value || !resolvedData.value) {
       throw createError({
         statusCode: resolvedError.value?.statusCode || 502,
-        statusMessage: resolvedError.value?.statusMessage || 'Storefront indisponível',
+        statusMessage: resolvedError.value?.statusMessage || 'Loja indisponível',
         message: resolvedError.value?.message || 'Não foi possível carregar a loja.',
       })
     }

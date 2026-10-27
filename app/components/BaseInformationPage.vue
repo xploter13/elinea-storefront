@@ -32,7 +32,7 @@ const helpCards = [
 
 const deliverySteps = [
   { number: '01', title: 'Escolha seus produtos', description: 'Adicione ao carrinho os itens que você deseja comprar.', icon: ShoppingBag },
-  { number: '02', title: 'Informe o endereço', description: 'No checkout, informe o CEP para consultar as opções de entrega, seus preços e prazos disponíveis.', icon: MapPin },
+  { number: '02', title: 'Informe o endereço', description: 'Ao finalizar a compra, informe o CEP para consultar as opções de entrega, seus preços e prazos disponíveis.', icon: MapPin },
   { number: '03', title: 'Acompanhe a compra', description: 'Depois de concluir o pedido, veja o status e os detalhes na sua área do cliente.', icon: PackageCheck },
 ]
 
@@ -108,10 +108,10 @@ const phoneHref = computed(() => {
 <style scoped>
 .information-page{background:#fff;color:#172033}
 .information-container{width:min(100% - 48px,1180px);margin:auto;padding:34px 0 34px}
-.breadcrumbs{display:flex;align-items:center;gap:10px;color:#64748b;font-size:13px}
+.breadcrumbs{display:flex;align-items:center;gap:10px;color:#64748b;font-size:14px}
 .breadcrumbs a{color:#536174;text-decoration:none}.breadcrumbs a:hover{text-decoration:underline}
 .information-intro{max-width:760px;padding:72px 0 58px}
-.eyebrow{color:var(--sf-primary);font-size:12px;font-weight:800;letter-spacing:.14em}
+.eyebrow{color:var(--sf-primary);font-size:14px;font-weight:800;letter-spacing:.14em}
 .information-intro h1{margin:16px 0;font-size:clamp(38px,5vw,64px);font-weight:750;letter-spacing:-.055em;line-height:1.08;text-wrap:balance}
 .information-intro p{max-width:690px;margin:0;color:#536174;font-size:18px;line-height:1.65}
 .information-section{padding-bottom:42px}
@@ -123,7 +123,7 @@ const phoneHref = computed(() => {
 .card-copy{display:grid;gap:6px}.card-copy strong{font-size:17px;font-weight:750}.card-copy>span{color:#64748b;font-size:14px;line-height:1.5}.card-arrow{color:var(--sf-primary)}
 .steps-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:16px}
 .step-card{min-height:230px;border:1px solid #e2e8f0;border-radius:16px;background:#f8fafc;padding:26px}
-.step-top{display:flex;align-items:center;justify-content:space-between;color:var(--sf-primary)}.step-top span{font-size:13px;font-weight:800;letter-spacing:.1em}
+.step-top{display:flex;align-items:center;justify-content:space-between;color:var(--sf-primary)}.step-top span{font-size:14px;font-weight:800;letter-spacing:.1em}
 .step-card h3{margin:40px 0 8px;font-size:19px;font-weight:750;letter-spacing:-.025em}.step-card p{margin:0;color:#536174;font-size:14px;line-height:1.6}
 .information-note{display:flex;gap:18px;margin-top:16px;border-left:3px solid var(--sf-primary);border-radius:0 11px 11px 0;background:#f8fafc;padding:20px 24px;color:#536174;font-size:14px;line-height:1.65}
 .information-note strong{flex:none;color:#172033}.information-note a{color:var(--sf-primary);font-weight:700;text-underline-offset:3px}

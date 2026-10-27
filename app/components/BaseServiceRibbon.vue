@@ -3,14 +3,14 @@ import { CreditCard, Headphones, RotateCcw, ShieldCheck, Truck } from '@lucide/v
 </script>
 
 <template>
-  <section class="service-ribbon" aria-label="Servicos da loja">
+  <section class="service-ribbon" aria-label="Serviços da loja">
     <div>
       <Truck :size="22" />
       <span><strong>Entrega rastreada</strong><small>Prazo calculado por CEP</small></span>
     </div>
     <div>
       <CreditCard :size="22" />
-      <span><strong>Pagamento flexivel</strong><small>Pix, cartao e ofertas</small></span>
+      <span><strong>Pagamento flexível</strong><small>Pix, cartão e ofertas</small></span>
     </div>
     <div>
       <RotateCcw :size="22" />
@@ -61,7 +61,7 @@ import { CreditCard, Headphones, RotateCcw, ShieldCheck, Truck } from '@lucide/v
 
 .service-ribbon strong {
   color: var(--sf-ink);
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 800;
   letter-spacing: -.01em;
 }

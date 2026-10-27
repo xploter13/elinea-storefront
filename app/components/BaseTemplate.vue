@@ -86,36 +86,36 @@ const themeStyle = computed(() => ({
 :global(.base-shell h4),
 :global(.base-shell .brand strong){font-family:var(--sf-display)!important}
 :global(.base-shell p){font-size:max(0.9375rem,15px)}
-:global(.base-shell .utility){font-size:12px}
+:global(.base-shell .utility){font-size:14px}
 :global(.base-shell .category-select),
 :global(.base-shell .desktop-search input),
 :global(.base-shell .mobile-search input){font-size:14px}
 :global(.base-shell .location small){font-size:10px}
-:global(.base-shell .location strong){font-size:12px}
+:global(.base-shell .location strong){font-size:14px}
 :global(.base-shell .icon-action),
 :global(.base-shell .cart){font-size:10px}
-:global(.base-shell .category-nav a){font-size:13px}
-:global(.base-shell .benefit-bar strong){font-size:13px}
+:global(.base-shell .category-nav a){font-size:14px}
+:global(.base-shell .benefit-bar strong){font-size:14px}
 :global(.base-shell .benefit-bar small){font-size:11px}
-:global(.base-shell .hero-copy>span){font-size:13px}
+:global(.base-shell .hero-copy>span){font-size:14px}
 :global(.base-shell .hero-copy p){font-size:17px}
 :global(.base-shell .hero-trust){font-size:11px}
 :global(.base-shell .section-title h2){font-size:28px}
-:global(.base-shell .section-title>a){font-size:13px}
-:global(.base-shell .category-rail strong){font-size:13px}
+:global(.base-shell .section-title>a){font-size:14px}
+:global(.base-shell .category-rail strong){font-size:14px}
 :global(.base-shell .category-rail small){font-size:11px}
 :global(.base-shell .promo h2){font-size:23px}
-:global(.base-shell .promo p){font-size:13px}
-:global(.base-shell .promo a){font-size:12px}
+:global(.base-shell .promo p){font-size:14px}
+:global(.base-shell .promo a){font-size:14px}
 :global(.base-shell .deals-heading nav button),
-:global(.base-shell .deals-heading nav a){font-size:13px}
-:global(.base-shell .retail-product .category){font-size:11px}
+:global(.base-shell .deals-heading nav a){font-size:14px}
+:global(.base-shell .retail-product .category){font-size:14px}
 :global(.base-shell .retail-product h3){font-size:16px}
-:global(.base-shell .retail-product .product-content>p){font-size:12px}
+:global(.base-shell .retail-product .product-content>p){font-size:14px}
 :global(.base-shell .retail-product .product-price strong){font-size:20px}
-:global(.base-shell .retail-product .product-price button){font-size:12px}
-:global(.base-shell .compact-products small){font-size:10px}
-:global(.base-shell .compact-products strong){font-size:13px}
-:global(.base-shell .footer-benefits strong){font-size:12px}
+:global(.base-shell .retail-product .product-price button){font-size:14px}
+:global(.base-shell .compact-products small){font-size:14px}
+:global(.base-shell .compact-products strong){font-size:14px}
+:global(.base-shell .footer-benefits strong){font-size:14px}
 :global(.base-shell .footer-benefits small){font-size:10px}
 </style>

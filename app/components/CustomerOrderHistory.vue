@@ -106,7 +106,7 @@ const statusTone = (status: string) => {
 .history-heading{display:flex;align-items:start;justify-content:space-between;gap:1rem;padding:1.25rem 1.5rem;border:1px solid var(--border);border-radius:1rem;background:var(--card);box-shadow:var(--shadow-soft)}
 .history-heading h2{margin:0;color:var(--foreground);font-size:1.15rem;line-height:1.3}
 .history-heading p{margin:.35rem 0 0;color:var(--muted-foreground);font-size:.875rem;line-height:1.5}
-.history-count{flex:none;border-radius:999px;background:var(--muted);padding:.45rem .75rem;color:var(--foreground);font-size:.75rem;font-weight:700}
+.history-count{flex:none;border-radius:999px;background:var(--muted);padding:.45rem .75rem;color:var(--foreground);font-size:14px;font-weight:700}
 .history-list{display:grid;gap:.75rem;margin-top:.75rem}
 .history-card{overflow:hidden;border:1px solid var(--border);border-radius:1rem;background:var(--card);box-shadow:var(--shadow-soft)}
 .history-card summary{display:grid;grid-template-columns:minmax(0,1fr) auto minmax(7rem,auto) auto;align-items:center;gap:1rem;min-height:5.5rem;padding:1rem 1.25rem;cursor:pointer;list-style:none}
@@ -115,8 +115,8 @@ const statusTone = (status: string) => {
 .history-card summary:focus-visible,.orders-history :is(a,button):focus-visible{outline:3px solid var(--primary);outline-offset:-3px}
 .order-identity{display:grid;min-width:0;gap:.3rem;overflow-wrap:anywhere}
 .order-identity strong{font-size:.95rem;color:var(--foreground)}
-.order-identity small,.order-total small{font-size:.75rem;color:var(--muted-foreground)}
-.order-status{border-radius:999px;background:var(--muted);padding:.4rem .7rem;color:var(--foreground);font-size:.75rem;font-weight:700;white-space:nowrap}
+.order-identity small,.order-total small{font-size:14px;color:var(--muted-foreground)}
+.order-status{border-radius:999px;background:var(--muted);padding:.4rem .7rem;color:var(--foreground);font-size:14px;font-weight:700;white-space:nowrap}
 .order-status.success{background:#dcfce7;color:#166534}.order-status.danger{background:#fee2e2;color:#991b1b}.order-status.info{background:#dbeafe;color:#1e40af}
 .order-total{display:grid;gap:.2rem;justify-items:end;white-space:nowrap;font-variant-numeric:tabular-nums}
 .order-total strong{font-size:.95rem;color:var(--foreground)}

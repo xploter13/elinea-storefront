@@ -116,10 +116,10 @@ onBeforeUnmount(() => {
 <style scoped>
 .article-page{background:#fff;color:var(--sf-ink)}
 .article-wrap{width:min(100% - 40px,1320px);margin-inline:auto}
-.breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding-top:30px;color:#667487;font-size:13px}
+.breadcrumb{display:flex;align-items:center;flex-wrap:wrap;gap:8px;padding-top:30px;color:#667487;font-size:14px}
 .breadcrumb a{color:inherit;text-decoration:none}.breadcrumb a:hover{color:var(--sf-primary)}
 .article-header{max-width:900px;margin:75px auto 49px;text-align:center}
-.header-meta{display:flex;align-items:center;justify-content:center;gap:12px;color:#68798b;font-size:13px;font-weight:650}
+.header-meta{display:flex;align-items:center;justify-content:center;gap:12px;color:#68798b;font-size:14px;font-weight:650}
 .header-meta>span:first-child{color:var(--sf-primary)}
 .meta-divider{width:3px;height:3px;border-radius:50%;background:#8390a0}
 .article-header h1{max-width:16ch;margin:24px auto 19px;font-size:clamp(47px,5.5vw,80px);font-weight:740;line-height:1.045;letter-spacing:-.06em;text-wrap:balance}
@@ -130,9 +130,9 @@ onBeforeUnmount(() => {
 .article-contents{align-self:start}.contents-inner{padding-top:8px}
 .contents-inner>span{display:block;margin-bottom:19px;color:var(--sf-ink);font-size:14px;font-weight:760}
 .article-contents nav{display:grid;gap:2px;padding-left:15px;border-left:1px solid #d9e2e9}
-.article-contents nav a{display:block;padding:9px 0;color:#68788b;font-size:13px;line-height:1.35;text-decoration:none}
+.article-contents nav a{display:block;padding:9px 0;color:#68788b;font-size:14px;line-height:1.35;text-decoration:none}
 .article-contents nav a:hover{color:var(--sf-primary)}
-.contents-inner> a{display:inline-flex;align-items:center;gap:9px;margin-top:31px;color:var(--sf-primary);font-size:13px;font-weight:750;text-decoration:none}
+.contents-inner> a{display:inline-flex;align-items:center;gap:9px;margin-top:31px;color:var(--sf-primary);font-size:14px;font-weight:750;text-decoration:none}
 .contents-inner> a:hover{text-decoration:underline;text-underline-offset:4px}
 .article-body{min-width:0}
 .article-page .article-body p{margin:0 0 24px;color:#344357;font-family:"Iowan Old Style","Palatino Linotype",Georgia,serif;font-size:19px;line-height:1.74}
@@ -149,14 +149,14 @@ onBeforeUnmount(() => {
 .article-close a:hover{background:var(--sf-primary)}
 .related{padding-top:105px}
 .related-heading{display:flex;align-items:end;justify-content:space-between;gap:22px;margin-bottom:26px;padding-bottom:19px;border-bottom:1px solid #e2e9ee}
-.related-heading span{color:var(--sf-primary);font-size:13px;font-weight:750}
+.related-heading span{color:var(--sf-primary);font-size:14px;font-weight:750}
 .related-heading h2{margin:8px 0 0;font-size:clamp(29px,3vw,42px);font-weight:730;letter-spacing:-.045em}
-.related-heading>a{display:inline-flex;align-items:center;gap:8px;color:var(--sf-primary);font-size:13px;font-weight:750;text-decoration:none}
+.related-heading>a{display:inline-flex;align-items:center;gap:8px;color:var(--sf-primary);font-size:14px;font-weight:750;text-decoration:none}
 .related-heading>a:hover{text-decoration:underline;text-underline-offset:4px}
 .related-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:23px}
 .related-card{min-width:0}.related-image{display:block;aspect-ratio:1.45;overflow:hidden;border-radius:9px;background:#eef2f5}
 .related-image img{display:block;width:100%;height:100%;object-fit:cover;transition:transform .35s ease}.related-image:hover img{transform:scale(1.04)}
-.related-card>span{display:block;margin-top:17px;color:#65758a;font-size:12px;font-weight:650}
+.related-card>span{display:block;margin-top:17px;color:#65758a;font-size:14px;font-weight:650}
 .related-card h3{max-width:24ch;margin:9px 0 0;font-size:clamp(22px,2vw,29px);font-weight:720;line-height:1.2;letter-spacing:-.035em}
 .related-card h3 a{color:inherit;text-decoration:none}.related-card h3 a:hover{color:var(--sf-primary)}
 .article-page a:focus-visible{outline:3px solid var(--sf-primary);outline-offset:4px}
