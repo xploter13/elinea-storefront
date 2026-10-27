@@ -81,6 +81,14 @@ test('catalog cart and checkout URLs redirect to the product catalog', async () 
 
 test('commerce and legacy stores retain buy buttons and the header cart', async () => {
   for (const domain of ['commerce.test', 'legacy.test']) {
+    for (const path of ['/', '/produtos']) {
+      const response = await load(path, domain)
+      assert.equal(response.status, 200)
+      const cards = await response.text()
+      assert.match(cards, /aria-label="Adicionar ao carrinho"/)
+      assert.match(cards, /Comprar pelo Whatsapp/)
+      assert.match(cards, /https:\/\/wa.me\/5511999991234\?text=/)
+    }
     const html = await (await load('/produto/produto-teste', domain)).text()
     assert.match(html, /aria-label="Abrir carrinho"/)
     assert.match(html, />Comprar agora<|>Comprar agora<\/button>/)
