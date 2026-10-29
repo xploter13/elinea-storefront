@@ -12,6 +12,7 @@ export interface StorefrontBranding {
   show_newsletter: boolean
   header_message: string
   contact_phone: string
+  whatsapp_phone?: string
   service_hours: string
   hero_eyebrow: string
   hero_cta_label: string

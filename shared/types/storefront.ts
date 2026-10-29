@@ -35,6 +35,11 @@ export interface ProductVariation {
 }
 
 export interface StoreProduct {
+  is_demo?: boolean
+  specifications?: import('@elinea/sdk').ProductSpecification[]
+  faqs?: import('@elinea/sdk').ProductFaq[]
+  demo_reviews?: import('@elinea/sdk').ProductDemoReview[]
+  reviews?: import('@elinea/sdk').ProductDemoReview[]
   id: number
   name: string
   slug: string

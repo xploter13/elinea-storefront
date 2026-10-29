@@ -52,7 +52,7 @@ const phoneHref = computed(() => {
             <strong>{{ storeName }}</strong>
           </NuxtLink>
           <p>{{ theme.footer_description || `Explore os produtos da ${storeName} e compre online.` }}</p>
-          <a v-if="phoneHref" class="contact-phone" :href="phoneHref"><Phone :size="18" aria-hidden="true" /><span><small>Fale com a loja</small><strong>{{ theme.contact_phone }}</strong></span></a>
+          <a v-if="phoneHref" class="contact-phone" :href="phoneHref"><Phone :size="18" aria-hidden="true" /><span><small>Telefone da loja</small><strong>{{ theme.contact_phone }}</strong></span></a>
           <p v-if="phoneHref && theme.service_hours" class="service-hours">{{ theme.service_hours }}</p>
         </div>
 
@@ -67,7 +67,7 @@ const phoneHref = computed(() => {
         <NuxtLink to="/">Voltar à página inicial <ArrowRight :size="15" aria-hidden="true" /></NuxtLink>
       </div>
     </div>
-    <BaseWhatsAppButton :phone="theme.contact_phone" />
+    <BaseWhatsAppButton :phone="theme.whatsapp_phone" />
   </footer>
 </template>
 

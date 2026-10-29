@@ -14,6 +14,7 @@ export const defaultBranding: StorefrontBranding = {
   show_newsletter: true,
   header_message: 'Conheça nossa seleção de produtos.',
   contact_phone: '',
+  whatsapp_phone: '',
   service_hours: 'Consulte os horários da loja',
   hero_eyebrow: 'Seleção da loja',
   hero_cta_label: 'Explorar produtos',
