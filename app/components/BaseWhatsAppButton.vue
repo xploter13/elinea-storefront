@@ -1,5 +1,7 @@
 <script setup lang="ts">
-const props = withDefaults(defineProps<{ phone?: string | null, variant?: 'floating' | 'inline', message?: string }>(), { variant: 'floating', message: '' })
+import { Headset } from '@lucide/vue'
+
+const props = withDefaults(defineProps<{ phone?: string | null, variant?: 'floating' | 'inline' | 'header', message?: string }>(), { variant: 'floating', message: '' })
 const route = useRoute()
 const whatsappUrl = computed(() => {
   const digits = props.phone?.replace(/\D/g, '') || ''
@@ -16,18 +18,20 @@ const hasPurchaseBar = computed(() => route.path.startsWith('/produto/'))
   <a
     v-if="whatsappUrl"
     class="whatsapp-button"
-    :class="{ 'above-purchase-bar': variant === 'floating' && hasPurchaseBar, 'whatsapp-button--inline': variant === 'inline' }"
+    :class="{ 'above-purchase-bar': variant === 'floating' && hasPurchaseBar, 'whatsapp-button--inline': variant === 'inline', 'whatsapp-button--header': variant === 'header' }"
     :href="whatsappUrl"
     target="_blank"
     rel="noopener noreferrer"
     :aria-label="variant === 'inline' ? 'Comprar este produto pelo WhatsApp (abre em nova aba)' : 'Falar com a loja pelo WhatsApp (abre em nova aba)'"
     title="Fale com a loja pelo WhatsApp"
   >
-    <svg width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false">
+    <Headset v-if="variant === 'header'" :size="21" aria-hidden="true" />
+    <svg v-else width="30" height="30" viewBox="0 0 32 32" fill="none" aria-hidden="true" focusable="false">
       <path d="M27.5 15.6a11.5 11.5 0 0 1-17 10.1L4 27.5l1.8-6.2A11.5 11.5 0 1 1 27.5 15.6Z" stroke="currentColor" stroke-width="2" stroke-linejoin="round" />
       <path d="m11.2 9.6 1.6-.1c.3 0 .5.2.6.5l1.1 2.6c.1.3.1.5-.1.8l-1 1.2c.8 1.7 2.1 3 3.8 3.8l1.2-1c.2-.2.5-.2.8-.1l2.6 1.2c.3.1.4.3.4.6 0 1.4-.8 2.7-2.4 2.8-2.5.2-5.2-1.4-7.1-3.3-1.9-1.9-3.5-4.6-3.3-7.1.1-.9.8-1.7 1.8-1.9Z" fill="currentColor" />
     </svg>
     <span v-if="variant === 'inline'">Comprar pelo Whatsapp</span>
+    <span v-else-if="variant === 'header'" class="whatsapp-support-copy"><small>Precisa de ajuda?</small><strong>Fale com a loja</strong></span>
   </a>
 </template>
 
@@ -41,5 +45,12 @@ const hasPurchaseBar = computed(() => route.path.startsWith('/produto/'))
 .whatsapp-button--inline{position:static;z-index:auto;display:flex;align-items:center;justify-content:center;gap:8px;width:100%;height:auto;min-height:52px;margin-top:12px;padding:12px 16px;border:1px solid #128c4a;border-radius:999px;background:#fff;color:#128c4a;box-shadow:none;font-size:14px;font-weight:700;line-height:1.5;text-align:center}
 .whatsapp-button--inline svg{width:22px;height:22px}
 .whatsapp-button--inline:hover{background:#effcf4;box-shadow:none}
+.whatsapp-button--header{position:static;z-index:auto;display:flex;align-items:center;gap:9px;width:auto;height:56px;margin-right:8px;padding:8px 14px 8px 8px;border:0;border-right:1px solid #e5e7eb;border-radius:0;background:transparent;color:var(--sf-ink,#111827);box-shadow:none}
+.whatsapp-button--header svg{color:var(--sf-primary,#2563eb)}
+.whatsapp-support-copy{display:grid;gap:3px;text-align:left;white-space:nowrap}
+.whatsapp-support-copy small{color:#667085;font-size:14px;line-height:1.25}
+.whatsapp-support-copy strong{font-size:14px;font-weight:650;line-height:1.25}
+.whatsapp-button--header:hover{background:#f8fafc;color:var(--sf-primary,#2563eb);box-shadow:none}
+@media(max-width:1080px){.whatsapp-button--header{justify-content:center;width:44px;height:44px;margin:0;padding:8px;border:0;border-radius:10px}.whatsapp-button--header .whatsapp-support-copy{display:none}}
 @media(prefers-reduced-motion:reduce){.whatsapp-button{transition:none}}
 </style>

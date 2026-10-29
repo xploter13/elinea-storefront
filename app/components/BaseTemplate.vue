@@ -88,12 +88,9 @@ const themeStyle = computed(() => ({
 :global(.base-shell h4),
 :global(.base-shell .brand strong){font-family:var(--sf-display)!important}
 :global(.base-shell p){font-size:max(0.9375rem,15px)}
-:global(.base-shell .utility){font-size:14px}
 :global(.base-shell .category-select),
 :global(.base-shell .desktop-search input),
 :global(.base-shell .mobile-search input){font-size:14px}
-:global(.base-shell .location small){font-size:10px}
-:global(.base-shell .location strong){font-size:14px}
 :global(.base-shell .icon-action),
 :global(.base-shell .cart){font-size:10px}
 :global(.base-shell .category-nav a){font-size:14px}

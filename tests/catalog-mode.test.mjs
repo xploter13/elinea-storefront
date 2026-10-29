@@ -67,6 +67,9 @@ test('catalog pages replace purchase actions with product WhatsApp links', async
     assert.doesNotMatch(html, /aria-label="Adicionar ao carrinho"|>Comprar agora<|aria-label="Abrir carrinho"|class="mobile-buy-bar"/)
     assert.doesNotMatch(html, /href="\/carrinho"|href="\/checkout"/)
     assert.match(html, /Comprar pelo Whatsapp/)
+    assert.match(html, /whatsapp-button--header/)
+    assert.match(html, /Precisa de ajuda\?/)
+    assert.doesNotMatch(html, /class="utility"/)
     assert.match(html, /https:\/\/wa.me\/5511999991234\?text=/)
   }
 })
