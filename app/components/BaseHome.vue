@@ -1,28 +1,16 @@
 <script setup lang="ts">
-import { ArrowLeft, ArrowRight, Baby, Dumbbell, HeartPulse, House, Laptop, LayoutGrid, Pause, Play, Shirt, ShoppingBag, Smile, Sparkles } from '@lucide/vue'
+import { ArrowRight, Baby, Dumbbell, HeartPulse, House, Laptop, LayoutGrid, Shirt, ShoppingBag, Smile, Sparkles } from '@lucide/vue'
 import type { StorefrontPayload } from '#shared/types/storefront'
 import type { StorefrontBranding } from '#shared/types/branding'
 import { useStorefrontCatalog } from '~~/layers/storefront-core/app/composables/useStorefrontCatalog'
 import { blogArticlesForStore } from '~/data/blog'
 import { productsInCategory } from '~/utils/category-products'
 import BaseProductCard from './BaseProductCard.vue'
+import { StorefrontBannerSlideshow } from '@elinea/ui/storefront'
 
 const props = defineProps<{ storefront: StorefrontPayload, theme: StorefrontBranding }>()
-const heroElement = ref<HTMLElement | null>(null)
-const heroImageFailed = ref(false)
-const activeSlideIndex = ref(0)
-const heroHovered = ref(false)
-const heroFocused = ref(false)
-const autoplayPaused = ref(false)
-const reducedMotion = ref(false)
-const slideAnnouncement = ref('')
-let slideTimer: ReturnType<typeof setTimeout> | undefined
-let motion: typeof import('gsap')['gsap'] | undefined
-let motionPreference: MediaQueryList | undefined
 const { productImage, usePlaceholder } = useStorefrontCatalog()
 const activeCategories = computed(() => props.storefront.categories.filter(category => category.is_active))
-const heroImageUrl = computed(() => heroImageFailed.value ? null : props.theme.hero_image_url?.trim() || null)
-watch(() => props.theme.hero_image_url, () => { heroImageFailed.value = false })
 const featured = computed(() => (props.storefront.products.some(item => item.is_featured) ? props.storefront.products.filter(item => item.is_featured) : props.storefront.products).slice(0, 12))
 const homeCategories = computed(() => {
   const populated = activeCategories.value.filter(category => productsInCategory(category.id, activeCategories.value, props.storefront.products).length > 0)
@@ -50,102 +38,6 @@ const categoryIcon = (name: string) => {
 const categoriesTitle = computed(() => props.theme.categories_title && props.theme.categories_title !== 'Compre por necessidade'
   ? props.theme.categories_title
   : 'Explore por categoria')
-const heroTitle = computed(() => props.theme.hero_title && !['Cuidado perto de você.', 'Descubra o que combina com o seu dia.'].includes(props.theme.hero_title)
-  ? props.theme.hero_title
-  : 'Uma loja. Muitas descobertas.')
-const heroSubtitle = computed(() => props.theme.hero_subtitle && ![
-  'Medicamentos, higiene e bem-estar com entrega para a sua região.',
-  'Explore a seleção da loja e encontre novas escolhas para diferentes momentos.',
-].includes(props.theme.hero_subtitle)
-  ? props.theme.hero_subtitle
-  : 'Explore produtos para diferentes momentos e encontre a sua próxima escolha.')
-const heroEyebrow = computed(() => props.theme.hero_eyebrow && !['Farmácia online', 'Um lugar para descobrir'].includes(props.theme.hero_eyebrow)
-  ? props.theme.hero_eyebrow
-  : 'Seleção da loja')
-const heroCtaLabel = computed(() => props.theme.hero_cta_label && props.theme.hero_cta_label !== 'Ver ofertas'
-  ? props.theme.hero_cta_label
-  : 'Explorar produtos')
-interface HomeSlide {
-  id: string
-  image: string | null
-  eyebrow: string
-  title: string
-  subtitle: string
-  cta: string
-  to: string
-}
-const heroSlides = computed<HomeSlide[]>(() => {
-  const slides: HomeSlide[] = []
-  if (heroImageUrl.value) slides.push({
-    id: 'store', image: heroImageUrl.value, eyebrow: heroEyebrow.value,
-    title: heroTitle.value, subtitle: heroSubtitle.value, cta: heroCtaLabel.value, to: '/produtos',
-  })
-
-  const campaigns = [
-    { id: 'tech', pattern: /eletr|tech|inform|comput|smart|gadget/i, image: '/images/home/slide-tech.png', eyebrow: 'Descubra a seleção', title: 'Tecnologia no seu ritmo.', subtitle: 'Escolhas para acompanhar você em todos os momentos.', cta: 'Explorar tecnologia' },
-    { id: 'home', pattern: /casa|decor|m[oó]ve|lar/i, image: '/images/home/slide-home.png', eyebrow: 'Sua casa, seu lugar', title: 'Seu espaço, novas possibilidades.', subtitle: 'Peças para deixar cada ambiente com a sua cara.', cta: 'Explorar casa' },
-    { id: 'beauty', pattern: /beleza|cosm[eé]t|skincare|autocuidado/i, image: '/images/home/slide-beauty.png', eyebrow: 'Um tempo para você', title: 'Um ritual só seu.', subtitle: 'Descubra uma seleção para seus momentos de cuidado.', cta: 'Explorar beleza' },
-  ]
-  for (const campaign of campaigns) {
-    const category = homeCategories.value.find(item => campaign.pattern.test(`${item.name} ${item.slug}`))
-    if (category) slides.push({ ...campaign, to: `/categoria/${category.slug}` })
-  }
-
-  if (!slides.length) slides.push({
-    id: 'catalog', image: productImage(props.storefront.products.find(item => item.is_featured && productImage(item)) || props.storefront.products.find(item => productImage(item))),
-    eyebrow: heroEyebrow.value, title: heroTitle.value, subtitle: heroSubtitle.value, cta: heroCtaLabel.value, to: '/produtos',
-  })
-  return slides
-})
-const activeSlide = computed(() => heroSlides.value[activeSlideIndex.value] || heroSlides.value[0]!)
-const warmedImages = new Set<string>()
-watch(heroSlides, slides => {
-  if (activeSlideIndex.value >= slides.length) activeSlideIndex.value = 0
-  warmNextSlide()
-  scheduleNextSlide()
-})
-watch(activeSlideIndex, () => {
-  warmNextSlide()
-  scheduleNextSlide()
-})
-function warmNextSlide() {
-  if (!import.meta.client || heroSlides.value.length < 2) return
-  const nextImage = heroSlides.value[(activeSlideIndex.value + 1) % heroSlides.value.length]?.image
-  if (!nextImage || warmedImages.has(nextImage)) return
-  warmedImages.add(nextImage)
-  const preload = new Image()
-  preload.src = nextImage
-}
-function scheduleNextSlide() {
-  if (slideTimer) clearTimeout(slideTimer)
-  if (!import.meta.client || heroSlides.value.length < 2 || reducedMotion.value) return
-  slideTimer = setTimeout(() => {
-    if (!heroHovered.value && !heroFocused.value && !autoplayPaused.value && document.visibilityState === 'visible') {
-      goToSlide(activeSlideIndex.value + 1)
-    } else {
-      scheduleNextSlide()
-    }
-  }, 6500)
-}
-function goToSlide(index: number, announce = false) {
-  if (!heroSlides.value.length) return
-  const previousIndex = activeSlideIndex.value
-  activeSlideIndex.value = (index + heroSlides.value.length) % heroSlides.value.length
-  if (announce) slideAnnouncement.value = `Destaque ${activeSlideIndex.value + 1} de ${heroSlides.value.length}: ${activeSlide.value.eyebrow}`
-  if (announce && previousIndex === activeSlideIndex.value) scheduleNextSlide()
-}
-function animateSlideEnter(element: Element, done: () => void) {
-  if (!motion || reducedMotion.value) return done()
-  motion.fromTo(element, { opacity: 0 }, { opacity: 1, duration: .65, ease: 'power2.out', onComplete: done })
-  const image = element.querySelector('.hero-backdrop')
-  if (image) motion.fromTo(image, { scale: 1.045 }, { scale: 1, duration: 1.3, ease: 'power2.out' })
-  const copy = element.querySelectorAll('.hero-eyebrow, .hero-copy h1, .hero-copy p, .hero-actions')
-  if (copy.length) motion.fromTo(copy, { opacity: 0, y: 14 }, { opacity: 1, y: 0, duration: .58, stagger: .08, delay: .12, ease: 'power2.out' })
-}
-function animateSlideLeave(element: Element, done: () => void) {
-  if (!motion || reducedMotion.value) return done()
-  motion.to(element, { opacity: 0, duration: .4, ease: 'power2.inOut', onComplete: done })
-}
 const homeBlogArticles = computed(() => blogArticlesForStore(props.storefront).slice(0, 3))
 const activeDealTab = ref<'best' | 'new' | 'sale'>('best')
 const saleProducts = computed(() => props.storefront.products.filter(product => product.original_price && product.original_price > product.price))
@@ -155,56 +47,12 @@ const dealProducts = computed(() => {
   return featured.value.slice(0, 8)
 })
 
-onMounted(async () => {
-  motionPreference = window.matchMedia('(prefers-reduced-motion: reduce)')
-  reducedMotion.value = motionPreference.matches
-  motionPreference.addEventListener('change', onMotionPreferenceChange)
-  warmNextSlide()
-  scheduleNextSlide()
-  motion = (await import('gsap')).gsap
-  if (heroElement.value && !reducedMotion.value) {
-    motion.fromTo(heroElement.value.querySelectorAll('.hero-slide .hero-copy > *'), { opacity: 0, y: 16 }, { opacity: 1, y: 0, duration: .72, stagger: .09, ease: 'power2.out' })
-  }
-})
-function onMotionPreferenceChange(event: MediaQueryListEvent) {
-  reducedMotion.value = event.matches
-  scheduleNextSlide()
-}
-onBeforeUnmount(() => {
-  if (slideTimer) clearTimeout(slideTimer)
-  motionPreference?.removeEventListener('change', onMotionPreferenceChange)
-  if (heroElement.value && motion) motion.killTweensOf(heroElement.value.querySelectorAll('.hero-slide, .hero-backdrop, .hero-copy > *'))
-})
 </script>
 
 <template>
   <main>
-    <section ref="heroElement" class="hero page-width" aria-label="Destaques da loja" aria-roledescription="carrossel" @mouseenter="heroHovered = true" @mouseleave="heroHovered = false">
-      <Transition :css="false" @enter="animateSlideEnter" @leave="animateSlideLeave">
-        <div :key="activeSlide.id" class="hero-slide">
-          <img v-if="activeSlide.image" class="hero-backdrop" :src="activeSlide.image" alt="" :fetchpriority="activeSlideIndex === 0 ? 'high' : undefined" :loading="activeSlideIndex === 0 ? 'eager' : 'lazy'" decoding="async" @error="activeSlide.id === 'store' ? heroImageFailed = true : usePlaceholder($event)" />
-          <div class="hero-scrim" aria-hidden="true"></div>
-          <div class="hero-copy" @focusin="heroFocused = true" @focusout="heroFocused = false">
-            <span class="hero-eyebrow">{{ activeSlide.eyebrow }}</span>
-            <h1 id="home-hero-title">{{ activeSlide.title }}</h1>
-            <p>{{ activeSlide.subtitle }}</p>
-            <div class="hero-actions">
-              <NuxtLink class="hero-cta" :to="activeSlide.to">{{ activeSlide.cta }} <ArrowRight :size="18" aria-hidden="true" /></NuxtLink>
-              <NuxtLink class="hero-secondary-link" to="/categorias">Ver categorias <ArrowRight :size="17" aria-hidden="true" /></NuxtLink>
-            </div>
-          </div>
-        </div>
-      </Transition>
-      <div v-if="heroSlides.length > 1" class="hero-controls" aria-label="Controles dos destaques">
-        <button type="button" class="hero-arrow" aria-label="Destaque anterior" @click="goToSlide(activeSlideIndex - 1, true)"><ArrowLeft :size="18" aria-hidden="true" /></button>
-        <div class="hero-dots" role="group" aria-label="Selecionar destaque">
-          <button v-for="(slide, index) in heroSlides" :key="slide.id" type="button" :class="{ active: index === activeSlideIndex }" :aria-label="`Mostrar destaque ${index + 1}: ${slide.eyebrow}`" :aria-current="index === activeSlideIndex ? 'true' : undefined" @click="goToSlide(index, true)"><span></span></button>
-        </div>
-        <button type="button" class="hero-arrow" aria-label="Próximo destaque" @click="goToSlide(activeSlideIndex + 1, true)"><ArrowRight :size="18" aria-hidden="true" /></button>
-        <button v-if="!reducedMotion" type="button" class="hero-arrow hero-playback" :aria-label="autoplayPaused ? 'Retomar apresentação automática' : 'Pausar apresentação automática'" @click="autoplayPaused = !autoplayPaused"><Play v-if="autoplayPaused" :size="16" aria-hidden="true" /><Pause v-else :size="16" aria-hidden="true" /></button>
-      </div>
-      <span class="sr-only" aria-live="polite">{{ slideAnnouncement }}</span>
-    </section>
+    <h1 class="sr-only">{{ storefront.site.name }}</h1>
+    <StorefrontBannerSlideshow class="home-banners page-width" :banners="storefront.banners || []" />
 
     <section class="categories page-width">
       <div class="section-title">
@@ -287,197 +135,7 @@ onBeforeUnmount(() => {
   margin-inline: auto
 }
 
-.hero {
-  position: relative;
-  height: clamp(400px, 34vw, 480px);
-  margin-top: 16px;
-  overflow: hidden;
-  border-radius: 14px;
-  background: #173228;
-  color: #fff;
-  isolation: isolate;
-}
-
-.hero-slide {
-  position: absolute;
-  inset: 0;
-  overflow: hidden;
-  background: linear-gradient(110deg, #18352c, #547a65);
-}
-
-.hero-backdrop {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
-}
-
-.hero-scrim {
-  position: absolute;
-  inset: 0;
-  background: linear-gradient(90deg, rgba(10, 24, 22, .48) 0%, rgba(10, 24, 22, .22) 41%, transparent 72%);
-  pointer-events: none;
-}
-
-.hero-copy {
-  position: relative;
-  z-index: 1;
-  display: flex;
-  width: min(58%, 750px);
-  height: 100%;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  padding: clamp(42px, 5.4vw, 76px);
-}
-
-.hero-eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 11px;
-  font-size: 14px;
-  font-weight: 700;
-  letter-spacing: .12em;
-  text-transform: uppercase;
-}
-
-.hero-eyebrow::before {
-  width: 23px;
-  height: 1px;
-  background: currentColor;
-  content: '';
-}
-
-.hero-copy h1 {
-  max-width: 12ch;
-  margin: 24px 0 18px;
-  font-size: clamp(47px, 5vw, 72px);
-  font-weight: 760;
-  line-height: 1.025;
-  letter-spacing: -.055em;
-  text-wrap: balance;
-}
-
-.hero-copy p {
-  max-width: 41ch;
-  margin: 0;
-  color: rgba(255, 255, 255, .91);
-  font-size: clamp(14px, 1.25vw, 17px);
-  line-height: 1.55;
-}
-
-.hero-actions {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 12px 22px;
-  margin-top: 31px;
-}
-
-.hero-actions a {
-  display: inline-flex;
-  min-height: 45px;
-  align-items: center;
-  justify-content: center;
-  gap: 13px;
-  font-size: 14px;
-  font-weight: 750;
-  text-decoration: none;
-}
-
-.hero-cta {
-  padding: 0 17px;
-  border: 1px solid #fff;
-  border-radius: 5px;
-  background: #fff;
-  color: #18342e;
-  transition: background .2s ease, color .2s ease, transform .2s ease;
-}
-
-.hero-cta:hover {
-  transform: translateY(-2px);
-  background: transparent;
-  color: #fff;
-}
-
-.hero-secondary-link {
-  color: #fff;
-}
-
-.hero-secondary-link:hover {
-  text-decoration: underline;
-  text-underline-offset: 5px;
-}
-
-.hero-controls {
-  position: absolute;
-  z-index: 3;
-  right: 24px;
-  bottom: 22px;
-  display: flex;
-  align-items: center;
-  gap: 5px;
-  padding: 5px;
-  border: 1px solid rgba(255, 255, 255, .24);
-  border-radius: 999px;
-  background: rgba(15, 24, 23, .28);
-  backdrop-filter: blur(12px);
-}
-
-.hero-arrow,
-.hero-dots button {
-  display: grid;
-  flex: none;
-  place-items: center;
-  padding: 0;
-  border: 0;
-  background: transparent;
-  color: #fff;
-  cursor: pointer;
-}
-
-.hero-arrow {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-}
-
-.hero-arrow:hover {
-  background: rgba(255, 255, 255, .18);
-}
-
-.hero-dots {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.hero-dots button {
-  width: 22px;
-  height: 32px;
-}
-
-.hero-dots span {
-  display: block;
-  width: 6px;
-  height: 6px;
-  border-radius: 999px;
-  background: rgba(255, 255, 255, .58);
-  transition: width .25s ease, background .25s ease;
-}
-
-.hero-dots button.active span {
-  width: 19px;
-  background: #fff;
-}
-
-.hero a:focus-visible,
-.hero button:focus-visible {
-  outline: 3px solid #fff;
-  outline-offset: 3px;
-}
+.home-banners { margin-top: 16px; }
 
 .section-title {
   display: flex;
@@ -981,8 +639,6 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 1000px) {
-  .hero-copy { width: min(67%, 620px); }
-  .hero-copy h1 { font-size: clamp(44px, 5.2vw, 62px); }
   .category-rail {
     display: flex;
     overflow-x: auto;
@@ -994,25 +650,10 @@ onBeforeUnmount(() => {
 }
 
 @media (max-width: 760px) {
-  .hero { display: block; height: 480px; min-height: 0; }
-  .hero-backdrop { object-position: 68% center; }
-  .hero-scrim { background: linear-gradient(90deg, rgba(9, 22, 21, .79), rgba(9, 22, 21, .3) 88%); }
-  .hero-copy { width: min(82%, 600px); padding: 42px; }
-  .hero-copy h1 { font-size: clamp(42px, 7.2vw, 57px); }
   .category-rail { display: flex; }
 }
 
 @media (max-width: 520px) {
-  .hero { height: 530px; margin-top: 10px; border-radius: 10px; }
-  .hero-backdrop { object-position: 72% center; }
-  .hero-scrim { background: linear-gradient(180deg, rgba(9, 22, 21, .84), rgba(9, 22, 21, .61) 60%, rgba(9, 22, 21, .12)); }
-  .hero-copy { width: 100%; height: auto; justify-content: flex-start; padding: 40px 25px 90px; }
-  .hero-copy h1 { max-width: 11ch; margin: 21px 0 16px; font-size: clamp(40px, 10vw, 51px); }
-  .hero-copy p { max-width: 34ch; font-size: 14px; }
-  .hero-actions { gap: 8px 16px; margin-top: 25px; }
-  .hero-actions a { min-height: 43px; font-size: 14px; }
-  .hero-cta { padding-inline: 12px; }
-  .hero-controls { right: 12px; bottom: 12px; }
   .categories { padding-top: 31px; }
   .category-rail { display: flex; gap: 9px; margin-right: -12px; padding-right: 12px; }
   .category-card { min-height: 178px; flex-basis: 142px; padding: 10px 8px 13px; }
@@ -1023,7 +664,7 @@ onBeforeUnmount(() => {
 }
 
 @media (prefers-reduced-motion: reduce) {
-  .hero-cta, .hero-dots span, .category-card, .category-art img { transition: none; }
+  .category-card, .category-art img { transition: none; }
 }
 
 @media (max-width: 1000px) {

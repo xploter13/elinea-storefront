@@ -34,7 +34,7 @@ export default defineEventHandler(async (event): Promise<StorefrontPayload> => {
   const query = getQuery(event)
   const blogPage = Math.max(1, Math.floor(Number(query.blog_page) || 1))
   const blogSlug = typeof query.blog_slug === 'string' ? query.blog_slug : undefined
-  const [productsResult, categoriesResult, analyticsResult, newsletterResult, shippingProvidersResult, blogResult, articleResult] = await Promise.allSettled([
+  const [productsResult, categoriesResult, analyticsResult, newsletterResult, shippingProvidersResult, blogResult, articleResult, bannersResult] = await Promise.allSettled([
     elinea.catalog.products.list({ perPage: 100 }),
     elinea.catalog.categories.list({ perPage: 100 }),
     elinea.analytics.get(),
@@ -42,8 +42,10 @@ export default defineEventHandler(async (event): Promise<StorefrontPayload> => {
     elinea.checkout.shippingProviders(),
     elinea.blog.list({ page: blogPage, perPage: 10 }),
     blogSlug ? elinea.blog.get(blogSlug) : Promise.resolve(null),
+    elinea.marketing.banners.list(),
   ])
   const warnings: string[] = []
+  if (bannersResult.status === 'rejected') warnings.push(warningFor('banners', bannersResult.reason))
   if (productsResult.status === 'rejected') warnings.push(warningFor('products', productsResult.reason))
   if (categoriesResult.status === 'rejected') warnings.push(warningFor('categories', categoriesResult.reason))
   if (analyticsResult.status === 'rejected') warnings.push(warningFor('analytics', analyticsResult.reason))
@@ -57,6 +59,7 @@ export default defineEventHandler(async (event): Promise<StorefrontPayload> => {
   const articles = blogResult.status === 'fulfilled' ? blogResult.value.data : []
   if (articleResult.status === 'fulfilled' && articleResult.value && !articles.some((article: { slug: string }) => article.slug === blogSlug)) articles.push(articleResult.value)
   return {
+    banners: bannersResult.status === 'fulfilled' ? bannersResult.value : [],
     blog: {
       articles,
       currentPage: blogResult.status === 'fulfilled' ? blogResult.value.meta?.current_page ?? 1 : 1,
