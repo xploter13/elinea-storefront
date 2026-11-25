@@ -11,11 +11,11 @@ Browser: loja1.elinea.com.br
         ↓
 Traefik preserva Host e envia X-Forwarded-Host
         ↓
-elinea-storefront (Nuxt/Nitro SSR)
+elinea-ecommerce-storefront (Nuxt/Nitro SSR)
         ↓ X-Store-Domain: loja1.elinea.com.br
 @elinea/sdk
         ↓
-elinea-api (Laravel ResolveSite)
+elinea-ecommerce-api (Laravel ResolveSite)
         ↓
 Site + catálogo + tema do onboarding
 ```
@@ -58,7 +58,7 @@ para gerar URLs absolutas válidas.
 
 ## Onboarding
 
-A tela `elinea-admin/app/pages/onboarding.vue` é a fonte de configuração do template.
+A tela `elinea-ecommerce-admin/app/pages/onboarding.vue` é a fonte de configuração do template.
 Ela permite salvar como rascunho ou aplicar/enviar os dados. Os campos atuais são:
 
 - nome da loja;
@@ -101,7 +101,7 @@ Produção requer:
 1. DNS wildcard `*.elinea.com.br` apontando para o load balancer/Traefik;
 2. certificado wildcard `*.elinea.com.br` (normalmente ACME DNS-01);
 3. uma regra Traefik que aceite os subdomínios e direcione todos ao mesmo serviço
-   `elinea-storefront`;
+   `elinea-ecommerce-storefront`;
 4. preservação do `Host` e substituição controlada de `X-Forwarded-Host`;
 5. cadastro exato do domínio em `sites.domain` antes de publicar a loja;
 6. storage público persistente/compartilhado para os assets do onboarding.
@@ -149,7 +149,7 @@ Checklist de aceitação:
 ## Validação técnica
 
 ```powershell
-# elinea-api
+# elinea-ecommerce-api
 php artisan migrate
 php artisan test --compact tests/Feature/StorefrontMultiTenancyTest.php
 
@@ -158,7 +158,7 @@ npm test
 npm run typecheck
 npm run build
 
-# elinea-storefront e elinea-admin
+# elinea-ecommerce-storefront e elinea-ecommerce-admin
 npm run typecheck
 npm run build
 ```

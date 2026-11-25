@@ -53,6 +53,6 @@ apenas como fallback de migração.
 
 Consulte `docs/context.md` e `docs/package-architecture.md` para os limites de cada
 camada.
-# elinea-storefront
+# elinea-ecommerce-storefront
 
 O storefront concentra a vitrine pública, a área do cliente, o carrinho, o checkout e a recuperação de senha.
