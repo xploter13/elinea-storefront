@@ -1,6 +1,7 @@
 import tailwindcss from '@tailwindcss/vite'
 import { createResolver } from '@nuxt/kit'
 
+const runtimeEnv = (globalThis as { process?: { env?: Record<string, string | undefined> } }).process?.env
 const { resolve } = createResolver(import.meta.url)
 const localPackages = {
   '@elinea/ui/styles.css': resolve('../elinea-ui/src/styles.css'),
@@ -18,6 +19,7 @@ export default defineNuxtConfig({
     elineaStoreSite: 'default',
     trustProxyHeaders: false,
   },
+  nitro: runtimeEnv?.ELINEA_SSR_TEST_BUILD === '1' ? { output: { dir: '.output-ssr-test' } } : {},
   css: ['~/assets/css/main.css'],
   app: {
     head: {

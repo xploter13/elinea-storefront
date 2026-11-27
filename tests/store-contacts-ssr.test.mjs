@@ -1,15 +1,12 @@
 import { test, before, after } from 'node:test'
 import assert from 'node:assert/strict'
-import { createServer, request as httpRequest } from 'node:http'
-import { spawn } from 'node:child_process'
-import { fileURLToPath } from 'node:url'
-const root = fileURLToPath(new URL('../', import.meta.url))
-let fixture, runtime, origin
+import { startStorefront } from './helpers/storefront-ssr.mjs'
+
+let storefront
 let mode = 'both'
 const contexts = []
-const listen = server => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address().port)))
 before(async () => {
-  fixture = createServer((req, res) => {
+  storefront = await startStorefront((req, res) => {
     const url = new URL(req.url, 'http://fixture.test')
     const domain = req.headers['x-store-domain'] || 'local.test'
     contexts.push({ path: url.pathname, domain })
@@ -26,30 +23,10 @@ before(async () => {
     if (url.pathname.endsWith('/newsletter-popup')) return send({ data: { enabled: false } })
     return send({ data: [] })
   })
-  const upstreamPort = await listen(fixture)
-  const reservation = createServer()
-  const port = await listen(reservation)
-  await new Promise(resolve => reservation.close(resolve))
-  origin = `http://127.0.0.1:${port}`
-  runtime = spawn(process.execPath, ['.output/server/index.mjs'], { cwd: root, env: { ...process.env, HOST: '127.0.0.1', PORT: String(port), NUXT_API_BASE: `http://127.0.0.1:${upstreamPort}/api/v1`, NUXT_TRUST_PROXY_HEADERS: 'false' }, stdio: ['ignore', 'ignore', 'pipe'] })
-  let diagnostics = ''
-  runtime.stderr.on('data', chunk => { diagnostics += chunk })
-  for (let attempt = 0; attempt < 100; attempt++) {
-    try { const response = await fetch(`${origin}/api/storefront`); if (response.ok) return } catch {}
-    if (runtime.exitCode !== null) throw new Error(`Nuxt exited: ${diagnostics}`)
-    await new Promise(resolve => setTimeout(resolve, 100))
-  }
-  throw new Error(`Nuxt did not start: ${diagnostics}`)
 })
-after(async () => { runtime?.kill('SIGTERM'); if (fixture) await new Promise(resolve => fixture.close(resolve)) })
-const load = (path, domain = 'a.test') => new Promise((resolve, reject) => {
-  const req = httpRequest(`${origin}${path}`, { headers: { host: domain } }, res => {
-    const chunks = []
-    res.on('data', chunk => chunks.push(chunk))
-    res.on('end', () => resolve(new Response(Buffer.concat(chunks), { status: res.statusCode, headers: res.headers })))
-  })
-  req.on('error', reject); req.end()
-})
+after(() => storefront?.close())
+const load = (path, domain = 'a.test') => storefront.load(path, domain)
+
 test('storefront displays the fixed phone as a call link and uses a separate WhatsApp number', async () => {
   const html = await (await load('/')).text()
   assert.match(html, /href="tel:1130001234"/)

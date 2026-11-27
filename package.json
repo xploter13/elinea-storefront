@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "build": "nuxt build",
+    "build:ssr-test": "ELINEA_SSR_TEST_BUILD=1 nuxt build --preset node-listener",
+    "test:ssr": "node --test tests/*-ssr.test.mjs tests/catalog-mode.test.mjs",
     "dev": "nuxt dev",
     "generate": "nuxt generate",
     "preview": "nuxt preview",
@@ -22,6 +24,7 @@
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
     "daisyui": "^5.7.22",
+    "node-mock-http": "^1.0.4",
     "tailwindcss": "^4.3.3",
     "typescript": "~5.9.3",
     "vue-tsc": "^3.3.11"

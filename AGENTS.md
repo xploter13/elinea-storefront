@@ -11,7 +11,7 @@ Leia `../elinea-deploy/docs/ecosystem/README.md`, `migration-plan.md` e `progres
 - Preservar compatibilidade ou documentar migração/versionamento; cada aplicação tem publicação independente.
 - Não sobrescrever mudanças locais, destruir dados, renomear remotos ou modificar produção. Registrar checks reais e pendências por fase.
 
-Storefront Nuxt/Nitro. Preservar temas, SSR, hostname, checkout e contratos @elinea/ui/storefront e @elinea/sdk. Nunca expor storeSecret no browser. Não importar o tema administrativo. Build: npm run build; testes SSR exigem build e sockets de fixture.
+Storefront Nuxt/Nitro. Preservar temas, SSR, hostname, checkout e contratos @elinea/ui/storefront e @elinea/sdk. Nunca expor storeSecret no browser. Não importar o tema administrativo. Build: npm run build; testes SSR: npm run build:ssr-test e npm run test:ssr, com fixtures em memória.
 
 
 ## Branches e ambientes

@@ -41,6 +41,19 @@ npm run typecheck
 npm run build
 ```
 
+Para executar os cenários SSR com dados de teste:
+
+```sh
+npm run build:ssr-test
+npm run test:ssr
+```
+
+O preset Node Listener grava o build de teste em `.output-ssr-test`. Cada suíte
+executa o Nitro compilado em um processo isolado, com requisições em memória
+e API fictícia. Os testes cobrem status HTTP, redirecionamentos, HTML e contexto
+por hostname. O build padrão em `.output` continua disponível para validar o
+servidor HTTP em um ambiente que permita abrir portas.
+
 ## Área do cliente
 
 As rotas `/carrinho`, `/checkout`, `/conta/**`, `/login`, `/cadastro` e `/redefinir-senha` são
